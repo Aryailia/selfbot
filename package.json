@@ -1,0 +1,21 @@
+{
+  "name": "tetra",
+  "version": "1.0.0",
+  "description": "Dictionary Lookup",
+  "main": "index.js",
+  "scripts": {
+    "discord": "echo \"Running discord bot\" && node selfbot.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test-login": "echo \"Attempting to login\" && node test/testbot.js",
+    "lint-bot": "echo \"Linting bot\" && eslint --env node bot.js"
+  },
+  "author": "Aryailia",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^3.19.0"
+  },
+  "dependencies": {
+    "discord.js": "^11.1.0",
+    "lodash": "^4.17.4"
+  }
+}

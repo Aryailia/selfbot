@@ -1,0 +1,3 @@
+[submodule "Discord-Bot-Development"]
+	path = lib/Discord-Bot-Development
+	url = https://github.com/Aryailia/Discord-Bot-Development

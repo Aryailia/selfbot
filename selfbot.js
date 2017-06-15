@@ -10,39 +10,28 @@ const setFlag = parse.flagSetters;
 const config = require('./src/config.json');
 const personal = require('personal.json');
 
-const selfbot = new Discord.Client();
+const selfbot = new Discord.Client({ bot: false }); // Is self-bot
 selfbot.login(personal.self_token);
-
-/*if (config.DEBUG) {
-  const echoer = new Discord.Client(personal.echo_token);
-  echoer.login('');
-  echoer.on('ready', () => console.log('Echoer is ready'));
-  echoer.on('message', (message) => {
-    const capture = /^=echo (.+)/.exec(message.content);
-    if (capture !== null && !message.author.bot) {
-      message.channel.send(capture[1]);
-    }
-  });
-}*/
 
 // Ready
 selfbot.on('ready', () => {
   console.log('Selfbot is ready.');
 });
 
+
+
 selfbot.on('message', function (msg) {
   if (msg.author.id !== selfbot.user.id) { return; } // Only respond to myself
   const commandMatch = parse.matchCommand.exec(msg.content);
   if (commandMatch === null) { return; } // Not a valid command format
+  msg.delete(); // Delete command since it's valid
 
-  // To do: test if you can delete your own message
-  msg.delete(); // Delete command and replace with whatever I'm about to say
   // Now break the parameter into flag and main
   const parameterMatch = typeof commandMatch[2] === 'undefined'
-    ?null
-    :parse.matchArgs.exec(commandMatch[2]);
+    ? null
+    : parse.matchArgs.exec(commandMatch[2]);
 
-  // Options and defalts
+  // Options and defaults
   const options = Object.create(null);
   options.originChannel = msg.channel;
   options.serverId = msg.channel.guild.id;

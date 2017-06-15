@@ -7,8 +7,10 @@ const _flatMap = require('lodash/fp/flatMap');
 const _filter = require('lodash/fp/filter');
 const _concat = require('lodash/fp/concat');
 const _take = require('lodash/fp/take');
+const _reduce = require('lodash/fp/reduce');
 const _join = require('lodash/fp/join');
 const _last = require('lodash/fp/last');
+const _zip = require('lodash/fp/zip');
 
 
 const Utils = require('./utils.js');
@@ -162,6 +164,72 @@ commands.list = function (parameter, options, selfbot) {
   
   Utils.notifyMe([`**Listing ${parameter} for server ${server.name}**\n`]
     .concat(output), selfbot, '');
+};
+
+// Creates a no permission role
+// Doesn't affect permissions of use external emoji and add reactions
+commands.createrole = function (parameter, options, self) {
+  options.originChannel.guild.createRole({
+    name: parameter,
+    permissions: 0
+  });
+};
+
+// Todo: put check to make sure all color changes were successful
+// Too lazy to put check 
+commands.colorroles = function (parameter, options, self) {
+  // Setting stuff
+  var startColor = [202,58, 46];  // 0xCA3A2E
+  var endinColor = [255,191,142]; // 0xFFBF8E
+  //var endinColor = [0,0,0]; // 0xFFBF8E
+  var list1 = ['Learning', 'Fluent', 'Heritage', 'Native'];
+  var list2 = [
+    'Gan','Hakka','Hokkien', 'Hunanese',
+    'Jin', 'Lanzhouhua', 'Longdu','Pinghua','Taishanese','Teochew','Wu',
+    'Zhejiang',
+  ];
+  /*var list2 = [ // For my own testing
+    'Hui', 'Gan', 'English', 'Japanese', 'Cantonese'
+  ];*/
+  /**
+   * Exclude Cantonese, Mandarin, English, Other, Classical Chinese
+   */
+
+  // Actual code
+  var maxIndex = list2.length - 1;
+  // x[1] - x[0], _zip(endinColor)
+  // x[0] - x[1], _zip(startColor)
+  var color = _flow(
+    _zip(endinColor),
+    _map(function (x) { return (x[1] - x[0]) / maxIndex; }),
+    _zip(endinColor)
+  )(startColor);
+  var roleCollection = options.originChannel.guild.roles;
+
+  list1.forEach(function (type) {
+    var roleList = _map(function (lang) {
+      return roleCollection.find('name', `${type} ${lang}`);
+    }, list2);
+    var len = _reduce(function (acc, value) {
+      return value == null ? acc: acc + 1;
+    }, 0, roleList);
+
+    // Must have found every role otherwise exit
+    if (len !== list2.length) {
+      console.log(`createrole: problem with ${type}`);
+      return;
+    }
+
+    // me.colorroles
+    // Tween assign color
+    roleList.forEach(function (role, index) {
+      var newColor = color.map(function (x) {
+        return Math.max(0,Math.min(255,Math.round(x[0] + x[1] * index)));
+      });
+      console.log(newColor);
+      role.setColor(newColor);
+    });
+  });
 };
 
 // Counts members that have a role

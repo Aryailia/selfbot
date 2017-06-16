@@ -1,4 +1,11 @@
-const personalChannel = require('personal.json').self_notify_location;
+const path = require('path');
+const IS_DEVELOPMENT = process.argv[2] != undefined &&
+  process.argv[2].trim().toLowerCase() === 'development';
+if (IS_DEVELOPMENT) {
+  delete require.cache[path.resolve('./personal/personal.json')];
+}
+const personalChannel = require(path.resolve('./personal/personal.json'))
+  .self_notify_location;
 
 const MAX_MESSAGE_LENGTH = 2000; // Discord is 2000 a message
 const MAX_SEARCH_CLUSTER = 25;

@@ -1,4 +1,10 @@
-const config = require('./config.json');
+const path = require('path');
+const IS_DEVELOPMENT = process.argv[2] != undefined &&
+  process.argv[2].trim().toLowerCase() === 'development';
+if (IS_DEVELOPMENT) {
+  delete require.cache[path.resolve('./src/config.json')];
+}
+const config = require(path.resolve('src/config.json'));
 
 const flagSetters = {
   'g': function (options, parameter) {

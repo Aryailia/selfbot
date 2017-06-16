@@ -1,3 +1,3 @@
-[submodule "Discord-Bot-Development"]
-	path = lib/Discord-Bot-Development
+[submodule "lib/bothelpers"]
+	path = lib/bothelpers
 	url = https://github.com/Aryailia/Discord-Bot-Development

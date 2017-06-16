@@ -1,14 +1,21 @@
 'use strict';
 
-// Externals
+// Always Load
+const path = require('path');
 const Discord = require('discord.js');
-// Internals
-const commands = require('./src/commands.js');
-const parse = require('./src/flags.js');
-const setFlag = parse.flagSetters;
-// Configs
+//const Discord = require('./lib/bothelpers/psuedodiscord.js');
 const config = require('./src/config.json');
-const personal = require('personal.json');
+const personal = require('./personal/personal.json');
+const botwrapper = require('./lib/bothelpers/botwrapper.js');
+const IS_DEVELOPMENT = process.argv[2] != undefined &&
+  process.argv[2].trim().toLowerCase() === 'development';
+
+// Dynamic Loads
+const imports = botwrapper.conditionalLoader(IS_DEVELOPMENT, {
+  commands: require.resolve('./src/commands.js'),
+  parse: require.resolve('./src/flags.js'),
+});
+imports.staticLoadIfNotDev();
 
 const selfbot = new Discord.Client({ bot: false }); // Is self-bot
 selfbot.login(personal.self_token);
@@ -18,46 +25,51 @@ selfbot.on('ready', () => {
   console.log('Selfbot is ready.');
 });
 
-
-
 selfbot.on('message', function (msg) {
   if (msg.author.id !== selfbot.user.id) { return; } // Only respond to myself
-  const commandMatch = parse.matchCommand.exec(msg.content);
+  const commandMatch = botwrapper
+    .checkCommandFormat(config.prefix).exec(msg.content);
   if (commandMatch === null) { return; } // Not a valid command format
-  msg.delete(); // Delete command since it's valid
 
-  // Now break the parameter into flag and main
-  const parameterMatch = typeof commandMatch[2] === 'undefined'
-    ? null
-    : parse.matchArgs.exec(commandMatch[2]);
+  Promise.all(imports.dynamicLoadIfDev()).then(function () {
+    // Now break the parameter into flag and main
+    const parameterMatch = typeof commandMatch[2] === 'undefined'
+      ? null
+      : imports.parse.matchArgs.exec(commandMatch[2]);
+    const setFlag = imports.parse.flagSetters;
 
-  // Options and defaults
-  const options = Object.create(null);
-  options.originChannel = msg.channel;
-  options.serverId = msg.channel.guild.id;
-  // Process the flags to set options
-  if (parameterMatch !== null) {
-    parse.flagList.reduce((protoOptions, flag) => {
-      const flagMatch = parse[flag].exec(parameterMatch[1]);
-      if (flagMatch !== null) {
-        setFlag[flag](protoOptions, flagMatch[1]); // Mutates {protoOptions}
-      }
-      return protoOptions;
-    }, options);
-  }
-  
-  const command = commandMatch[1];
-  const arg = parameterMatch === null ?'' :parameterMatch[2];
-  
-  if (config.DEBUG) {
-    console.log('commandMatch', commandMatch);
-    console.log('parameterMatch', parameterMatch);
-    console.log('commnad', command);
-    console.log('arg    ', arg);
-    console.log('options', options);
-  }
+    // Options and defaults
+    const options = Object.create(null);
+    options.originChannel = msg.channel;
+    //options.serverId = msg.channel.guild.id;
+    // Process the flags to set options
+    if (parameterMatch !== null) {
+      imports.parse.flagList.reduce((protoOptions, flag) => {
+        const flagMatch = imports.parse[flag].exec(parameterMatch[1]);
+        if (flagMatch !== null) {
+          setFlag[flag](protoOptions, flagMatch[1]); // Mutates {protoOptions}
+        }
+        return protoOptions;
+      }, options);
+    }
+    
+    const command = commandMatch[1];
+    const arg = parameterMatch === null ?'' :parameterMatch[2];
+    
+    //if (IS_DEVELOPMENT) {
+    //  console.log('commandMatch', commandMatch);
+    //  console.log('parameterMatch', parameterMatch);
+    //  console.log('commnad', command);
+    //  console.log('arg    ', arg);
+    //  console.log('options', options);
+    //}
 
-  if (commands.hasOwnProperty(command)) {
-    commands[command](arg, options, selfbot);
-  }
+    if (imports.commands.hasOwnProperty(command)) {
+      imports.commands[command](arg, options, selfbot);
+      msg.delete(); // Delete command since it's valid
+    }
+  }).catch(function (error) {
+    console.error('selfbot.js:', error);
+  });
 });
+//*/

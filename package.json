@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "discord": "echo \"Running discord bot\" && node selfbot.js",
+    "dev": "echo \"Running discord bot\" && node selfbot.js development",
     "test": "echo \"Running: test.js\" && node test/test.js ",
     "test-login": "echo \"Attempting to login\" && node test/testbot.js",
     "lint-bot": "echo \"Linting bot\" && eslint --env node bot.js"

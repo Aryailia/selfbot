@@ -1,16 +1,19 @@
 const IS_DEVELOPMENT = process.argv[2] != undefined &&
   process.argv[2].trim().toLowerCase() === 'development';
 const importModules = {
-  flow: 'lodash/fp/flow',
   chunk: 'lodash/fp/chunk',
-  map: 'lodash/fp/map',
+  concat: 'lodash/fp/concat',
+  flow: 'lodash/fp/flow',
   flatMap: 'lodash/fp/flatMap',
   filter: 'lodash/fp/filter',
-  concat: 'lodash/fp/concat',
-  take: 'lodash/fp/take',
-  reduce: 'lodash/fp/reduce',
   join: 'lodash/fp/join',
   last: 'lodash/fp/last',
+  map: 'lodash/fp/map',
+  reduce: 'lodash/fp/reduce',
+  sortBy: 'lodash/fp/sortBy',
+  take: 'lodash/fp/take',
+  uniq: 'lodash/fp/uniq',
+  uniqWith: 'lodash/fp/uniqWith',
   zip: 'lodash/fp/zip',
 };
 

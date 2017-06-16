@@ -4,14 +4,17 @@ const path = require('path');
 const IS_DEVELOPMENT = process.argv[2] != undefined &&
   process.argv[2].trim().toLowerCase() === 'development';
 
+const imports = {};
 if (IS_DEVELOPMENT) {
   delete require.cache[path.resolve('./src/utils.js')];
   delete require.cache[path.resolve('./src/config.json')];
+  delete require.cache[path.resolve('./src/langServerManagement.js')];
   delete require.cache[path.resolve('./src/fp.js')];
 }
 const Utils = require(path.resolve('./src/utils.js'));
 const config = require(path.resolve('./src/config.json'));
 const _ = require(path.resolve('./src/fp.js'));
+imports.langServer = require(path.resolve('./src/langServerManagement.js'));
 const IGNORE_LIST = config.ignore_server;
 
 const ROLES_MESSAGE_WIDTH = 60;
@@ -138,9 +141,15 @@ const commands = {
   //*/
 };
 
+imports.langServer(commands, help);
+
   // Change param to be channels, friends,
 help.list = ` Lists out information related to the server
-${config.prefix}list prefix
+${config.prefix}list -g <guildId> <parameter>
+
+Available options for parameter are:
+- channels
+- roles
 `; 
 commands.list = function (parameter, options, selfbot) {
   let output = '';
@@ -149,13 +158,14 @@ commands.list = function (parameter, options, selfbot) {
 
   // Failsu
   if (parameter === '') {
-    failure = true; output = 'list: please specify channels, roles';
+    failure = true; output = 'list - please specify channels, roles';
   } else if (!Utils.isPersonal(options.originChannel)) {
-    failure = true; output = 'list: only available in personal channel';
+    failure = true; output = 'list - only available in personal channel';
   } else if (server == undefined) {
-    failure = true; output = `list: invalid server id ${options.serverId}`;
+    failure = true; output = `list - invalid server id ${options.serverId}`;
   }
   if (failure) {
+    output = 'Error: ' + output;
     Utils.notifyMe([output], selfbot, '');
     console.error(output);
     return;
@@ -180,75 +190,11 @@ commands.list = function (parameter, options, selfbot) {
         });
       break;
     default:
-      output
+      //output
       break;
   }
   Utils.notifyMe([`**Listing ${parameter} for server ${server.name}**\n`]
     .concat(output), selfbot, '');
-};
-
-// Creates a no permission role
-// Doesn't affect permissions of use external emoji and add reactions
-commands.createrole = function (parameter, options, self) {
-  options.originChannel.guild.createRole({
-    name: parameter,
-    permissions: 0
-  });
-};
-
-// Todo: put check to make sure all color changes were successful
-// Too lazy to put check 
-commands.colorroles = function (parameter, options, self) {
-  // Setting stuff
-  var startColor = [202,58, 46];  // 0xCA3A2E
-  var endinColor = [255,191,142]; // 0xFFBF8E
-  //var endinColor = [0,0,0]; // 0xFFBF8E
-  var list1 = ['Learning', 'Fluent', 'Heritage', 'Native'];
-  var list2 = [
-    'Gan','Hakka','Hokkien', 'Hunanese',
-    'Jin', 'Lanzhouhua', 'Longdu','Pinghua','Taishanese','Teochew','Wu',
-    'Zhejiang',
-  ];
-  //var list2 = [ // For my own testing
-  //  'Hui', 'Gan', 'English', 'Japanese', 'Cantonese'
-  //];
-  // Exclude Cantonese, Mandarin, English, Other, Classical Chinese
-
-  // Actual code
-  var maxIndex = list2.length - 1;
-  // x[1] - x[0], _zip(endinColor)
-  // x[0] - x[1], _zip(startColor)
-  var color = _.flow(
-    _.zip(endinColor),
-    _.map(function (x) { return (x[1] - x[0]) / maxIndex; }),
-    _.zip(endinColor)
-  )(startColor);
-  var roleCollection = options.originChannel.guild.roles;
-
-  list1.forEach(function (type) {
-    var roleList = _.map(function (lang) {
-      return roleCollection.find('name', `${type} ${lang}`);
-    }, list2);
-    var len = _.reduce(function (acc, value) {
-      return value == null ? acc: acc + 1;
-    }, 0, roleList);
-
-    // Must have found every role otherwise exit
-    if (len !== list2.length) {
-      console.log(`createrole: problem with ${type}`);
-      return;
-    }
-
-    // me.colorroles
-    // Tween assign color
-    roleList.forEach(function (role, index) {
-      var newColor = color.map(function (x) {
-        return Math.max(0,Math.min(255,Math.round(x[0] + x[1] * index)));
-      });
-      console.log(newColor);
-      role.setColor(newColor);
-    });
-  });
 };
 
 // Counts members that have a role
@@ -285,5 +231,15 @@ commands.role = function (parameter, options, self) {
     });
 };
 //*/
+
+// Import all the commands from {library} to be exported again
+/*function _import(library) {
+  Object.keys(library).forEach(function (newCommand) {
+    if (commands.hasOwnProperty(newCommand)) {
+      throw new SyntaxError(`Already registered the '${newCommand}' command`);
+    }
+    commands[newCommand] = library[newCommand];
+  });
+}*/
 
 module.exports = commands;

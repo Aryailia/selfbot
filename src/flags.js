@@ -7,7 +7,9 @@ if (IS_DEVELOPMENT) {
 const config = require(path.resolve('src/config.json'));
 
 const flagSetters = {
-  'g': function (options, parameter) {
+  'h': function (options) {
+    options.help = true;
+  }, 'g': function (options, parameter) {
     options.serverId = parameter;
   }, 'v': function (options) {
     options.verbose = true;

@@ -4,20 +4,48 @@ const IS_DEVELOPMENT = process.argv[2] != undefined &&
 if (IS_DEVELOPMENT) {
   delete require.cache[path.resolve('./personal/personal.json')];
 }
-const personalChannel = require(path.resolve('./personal/personal.json'))
-  .self_notify_location;
+const personal = require(path.resolve('./personal/personal.json'));
+const personalChannel = personal.self_notify_location;
 
 const MAX_MESSAGE_LENGTH = 2000; // Discord is 2000 a message
 const MAX_SEARCH_CLUSTER = 25;
 const FETCH_LIMIT = 100;
 
-const commands = {
+const utils = {
   /**
    * @param {Channel} Channel The channel to check
    * @returns {boolean} True
    */
   isPersonal: function (channel) {
     return channel.id === personalChannel.channel;
+  },
+  langServerId: function (channel) {
+    return personal.language_server;
+  },
+
+  /**
+   * @param {Object} commands
+   * @param {Object} help
+   * @returns {function (Object, Object)} The main command and help objects
+   * to merge into in the current context
+   */
+  export: function (sourceCommands, sourceHelp) {
+    return function (targetCommands, targetHelp) {
+      Object.keys(sourceCommands).forEach(function (key) {
+        if (targetCommands.hasOwnProperty(key)) {
+          throw new SyntaxError(`Already registered the '${newCommand}' command`);
+        }
+        targetCommands[key] = sourceCommands[key];
+        targetHelp[key] = sourceHelp[key];
+      });
+    };
+  },
+
+  addCommand: function (name, commands, help, documentation, handler) {
+    help[name] = documentation;
+    commands = function (parameter, options, client) {
+    //  if 
+    };
   },
 
   /**
@@ -59,7 +87,7 @@ const commands = {
         .then(deleteCount => deleteCount.reduce((x, y) => x + y, 0))
         .then(deletedSum => deletedSum === 0 && message.id === x[0].id
           ? x[0] // Case that nothing deleted and not traversing
-          : commands.deleteAfter(channel, x[1], count + deletedSum))
+          : utils.deleteAfter(channel, x[1], count + deletedSum))
       );
   },
 
@@ -141,9 +169,9 @@ const commands = {
   },
 
   truncateAndPad: function (str, targetLength) {
-    const trunc = commands.truncate(str, targetLength);
+    const trunc = utils.truncate(str, targetLength);
     return trunc + (new Array(targetLength - trunc.length).join(' '));
   },
 };
 
-module.exports = commands;
+module.exports = utils;

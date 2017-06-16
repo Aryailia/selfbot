@@ -23,14 +23,14 @@ const flags = Object.keys(flagSetters);
 const flagStr = flags.join(''); 
 const parse = {
   matchCommand: new RegExp(`^${config.prefix}(\\S+)(?: +${main})?$`),
-  matchArgs:    new RegExp(`^((?:-[${flagStr}](?: +[^-\\s]+)? +)*)${main}?$`),
+  matchArgs:    new RegExp(`^((?:-[${flagStr}](?: +[^-\\s]+)? *)*)${main}?$`),
   flagList: flags,
   flagSetters: flagSetters,
 };
 
-flags.forEach(flag =>
-  parse[flag] = new RegExp(`(?:-\\S(?: +\\S*)? +)*-${flag}(?: +(\\S*))?`)
-);
+flags.forEach(function (flag) {
+  parse[flag] = new RegExp(`(?:-\\S(?: +\\S*)? +)*-${flag}(?: +(\\S*))?`);
+});
 
 
 module.exports = parse;

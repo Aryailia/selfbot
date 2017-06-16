@@ -1,3 +1,4 @@
+// Modules
 const path = require('path');
 const IS_DEVELOPMENT = process.argv[2] != undefined &&
   process.argv[2].trim().toLowerCase() === 'development';
@@ -9,6 +10,7 @@ if (IS_DEVELOPMENT) {
 const Utils = require(path.resolve('./src/utils.js'));
 const _ = require(path.resolve('./src/fp.js'));
 
+// Code Body
 const help = {};
 const commands = {};
 
@@ -40,59 +42,79 @@ function _getColoringLanguageRoles(guild) {
   return languages;
 }
 
-commands._listroles = function (parameter, options, self) {
-  const languages = _getColoringLanguageRoles(parameter === 'local'
-    ? options.originChannel.guild
-    : self.guilds.find('id', Utils.langServerId()));
-  options.originChannel.send(`'${languages.join('\', \'')}'`);
-};
+Utils.addCommand('_listroles', commands, help,
+  '_listroles [\'local\']',
+  'Lists all the roles in prefixed by learning/etc and not in the ignore list.',
+  '\'local\' specifies the current channel',
+  function (parameter, options, self) {
+    const languages = _getColoringLanguageRoles(parameter === 'local'
+      ? options.originChannel.guild
+      : self.guilds.find('id', Utils.langServerId()));
+    options.originChannel.send(`'${languages.join('\', \'')}'`);
+  }
+);
+
 
 // Creates a no permission role
 // Doesn't affect permissions of use external emoji and add reactions
-commands._createrole = function (parameter, options, self) {
-  options.originChannel.guild.createRole({
-    name: parameter,
-    permissions: parameter === '' ? 0 : parseInt(parameter)
-  });
-};
-
-
-commands._colorroles = function (parameter, options, self) {
-  // Setting stuff
-  const startColor = [202,58, 46];  // 0xCA3A2E
-  const endinColor = [255,191,142]; // 0xFFBF8E
-
-  const list1 = _rolePrefixList;
-  const list2 = _getColoringLanguageRoles(options.originChannel.guild);
-
-  // Actual code
-  const maxIndex = list2.length - 1;
-  // x[1] - x[0], _zip(endinColor)
-  // x[0] - x[1], _zip(startColor)
-  const colorTween = _.flow(
-    _.zip(endinColor),
-    _.map(function (x) { return (x[1] - x[0]) / maxIndex; }),
-    _.zip(endinColor)
-  )(startColor);
-  const colorHash = {}; // Associated array of <language, color> pairs
-  list2.forEach(function (language, index) {
-    colorHash[language] = colorTween.map(function (x) {
-      return Math.max(0,Math.min(255,Math.round(x[0] + x[1] * index)));
+// Todo: add error priting for failure and what not
+Utils.addCommand('_createrole', commands, help,
+  '_createrole [<perimssionMask>]',
+  'Adds a role with <permissionMask> permission level. <permissionMask> must be a number.',
+  `  If nothing is specified for <permissionMask>, then it copies @ everyone
+  Can also specify guild flag coming soon (TM)`,
+  function (parameter, options) {
+    options.originChannel.guild.createRole({
+      name: parameter,
+      permissions: parameter === '' ? '' : parseInt(parameter)
     });
-  });
-  
-  const roleCollection = options.originChannel.guild.roles;
-  list1.forEach(function (type) {
-    var roleList = _.flow( // Get all the roles that are `${list1} ${list2}`
-      _.map(function (lang) {
-        return roleCollection.find('name', `${type} ${lang}`);
-      }),
-      _.filter(function (role) { return role != undefined; })
-    )(list2);
-    roleList.forEach(function (role) { // Assign color
-      role.setColor(colorHash[role.name.split(' ')[1]]);
+  }
+);
+
+// Todo: Maybe custom guild specification or what not
+Utils.addCommand('_assigncolor', commands, help,
+  '_assigncolor',
+  'Assigns all the non-main language roles a color tweening between two values',
+  `  Hard-coded tween between to 0xCA3A2E to 0xFFBF8E 
+  Prefixes are ${_rolePrefixList.join(', ')}
+  Excludes are ${_roleIgnoreList.join(', ')}`,
+  function (parameter, options, self) {
+    // Setting stuff
+    const startColor = [202,58, 46];  // 0xCA3A2E
+    const endinColor = [255,191,142]; // 0xFFBF8E
+
+    const list1 = _rolePrefixList;
+    const list2 = _getColoringLanguageRoles(options.originChannel.guild);
+
+    // Actual code
+    const maxIndex = list2.length - 1;
+    // x[1] - x[0], _zip(endinColor)
+    // x[0] - x[1], _zip(startColor)
+    const colorTween = _.flow(
+      _.zip(endinColor),
+      _.map(function (x) { return (x[1] - x[0]) / maxIndex; }),
+      _.zip(endinColor)
+    )(startColor);
+    const colorHash = {}; // Associated array of <language, color> pairs
+    list2.forEach(function (language, index) {
+      colorHash[language] = colorTween.map(function (x) {
+        return Math.max(0,Math.min(255,Math.round(x[0] + x[1] * index)));
+      });
     });
-  });
-};
+    
+    const roleCollection = options.originChannel.guild.roles;
+    list1.forEach(function (type) {
+      var roleList = _.flow( // Get all the roles that are `${list1} ${list2}`
+        _.map(function (lang) {
+          return roleCollection.find('name', `${type} ${lang}`);
+        }),
+        _.filter(function (role) { return role != undefined; })
+      )(list2);
+      roleList.forEach(function (role) { // Assign color
+        role.setColor(colorHash[role.name.split(' ')[1]]);
+      });
+    });
+  }
+);
 
 module.exports = Utils.export(commands, help);

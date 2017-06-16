@@ -21,23 +21,51 @@ const ROLES_MESSAGE_WIDTH = 60;
 const ROLES_MAX_DISPLAY = 99;
 const ROLES_COL_THRESHOLD = 60; // Inclusive threshold afer which we bump to 3 columns
 
-const help = {
-};
+const help = {};
+const commands = {};
+imports.langServer(commands, help);
 
-//const description = {};
-const commands = {
-  ping: function (parameter, options) {
-    console.log('asdfasdfasdfasdfasdfasdf\n\n');
-    options.originChannel.send('pong');
-  },
+Utils.addCommand('help', commands, help,
+  'help',
+  'Lists ',
+  `  Valid forms are:
+  - help
+  - help <command>
+  eg. help ping
 
-  echo: function (parameter, options) {
-    if (parameter.length > 0) {
-      options.originChannel.send(parameter);
+  You can set the -h flag after an actual command to display specific info as well`,
+  function (parameter, options) {
+    const sendMessage = options.originChannel.send;
+    if (parameter === '') { // General help message is print all the headers
+      const messages = _.map(function (commandName) {
+        return `**${config.prefix}${commandName}** ${help[commandName].header}`;
+      }, Object.keys(help));
+      sendMessage(_.sortBy(x => x, messages).join('\n'));
+    } else {
+      if (!commands.hasOwnProperty(parameter)) {
+        sendMessage(`Error: No help command named '${parameter}'`);
+        console.error(`Error: No help command named '${parameter}'`);
+      } else if (!help.hasOwnProperty(parameter)) {
+        sendMessage(`Error: No help entry for '${parameter}'`);
+        console.error(`Error: No help entry for '${parameter}'`);
+      } else {
+        Utils.displayDetailedHelp(help[parameter], sendMessage);
+      }
     }
-  },
+  }
+);
 
-  test: function (serverId, options, selfbot) {
+Utils.addCommand('ping', commands, help,
+  'ping',
+  'To test if the bot is working',
+  'Should respond with \'pong\'.',
+  function (parameter, options) {
+    options.originChannel.send('pong');
+  }
+);
+
+
+  //test: function (serverId, options, selfbot) {
     //Utils.getLatestMessages(selfbot.user.id, 25, selfbot.guilds.get(serverId))
     //  .then(messages => {
     //    const output = messages.map(msg => msg.content);
@@ -46,9 +74,8 @@ const commands = {
     
     //console.log(selfbot.guilds.get(serverId).icon);
     //console.log(selfbot.guilds.get(serverId).iconURL);
-  },
-
-  // Deletes any messages from a specified ID onwards
+  //},
+// Deletes any messages from a specified ID onwards
   // At the moment this command doesn't check if any of the deletes were
   // successful and and tally those, eg. won't catch random network errors
   // Does handle not having permission to delete.
@@ -75,7 +102,12 @@ const commands = {
   //  );
   //},
 
-  survey: function (serverID, options, selfbot) {
+Utils.addCommand('survey', commands, help,
+  'survey <sharedServerCount = 2>',
+  'Finds all users that share ',
+  `
+  `,
+  function (serverID, options, selfbot) {
     const VERBOSE = false;
     const MIN = 2; // Minimum shared guild count
     const target = selfbot.guilds.get(serverID);
@@ -99,9 +131,14 @@ const commands = {
             : `${start} ${guilds.size} servers\n`);
         }))
       .then(output => Utils.notifyMe(output, selfbot, '```'));
-  },
+  }
+);
 
-  stalk: function (id, options, self) {
+Utils.addCommand('stalk', commands, help,
+  'stalk <userID>',
+  'Finds the last 25 messages made by the user <userID> in all servers you are in',
+  '',
+  function (id, options, self) {
     // Going through the guilds to avoid caching issues of client.users
     const query = self.guilds.find(server =>(server.member(id) !== null));
     if (query === null) {
@@ -133,113 +170,98 @@ const commands = {
             ` in #${msg.channel.name} within ${msg.guild.name}` + '``\n'
           )))
       .then(msgs => Utils.notifyMe(header.concat(msgs), self, ''));
-  },
-
-  'exit': function () {
-    process.exit(0);
   }
-  //*/
-};
+);
 
-imports.langServer(commands, help);
+Utils.addCommand('list', commands, help,
+  'list -g <guildId> <parameter>',
+  'Lists out information related to the server',
+  `  Only can be used in personal text channel
+  Available options for parameter are:
+  - channels
+  - roles`, 
+  function (parameter, options, selfbot) {
+    let output = '';
+    let failure = false;
+    const server = selfbot.guilds.get(options.serverId);
 
-  // Change param to be channels, friends,
-help.list = ` Lists out information related to the server
-${config.prefix}list -g <guildId> <parameter>
-
-Available options for parameter are:
-- channels
-- roles
-`; 
-commands.list = function (parameter, options, selfbot) {
-  let output = '';
-  let failure = false;
-  const server = selfbot.guilds.get(options.serverId);
-
-  // Failsu
-  if (parameter === '') {
-    failure = true; output = 'list - please specify channels, roles';
-  } else if (!Utils.isPersonal(options.originChannel)) {
-    failure = true; output = 'list - only available in personal channel';
-  } else if (server == undefined) {
-    failure = true; output = `list - invalid server id ${options.serverId}`;
-  }
-  if (failure) {
-    output = 'Error: ' + output;
-    Utils.notifyMe([output], selfbot, '');
-    console.error(output);
-    return;
-  }
-  
-  switch (parameter.toLowerCase()) {
-    case 'channels':
-      output = server.channels.map(chan =>
-        `${chan.type === 'voice' ? '' : '#'}${chan.name}: \n`
-        + chan.permissionOverwrites.map(perm => {
-          const name = perm.type === 'role'
-            ? perm.channel.guild.roles.get(perm.id).name
-            : `<@${perm.channel.guild.members.get(perm.id).id}>`;
-          return `・${name} => allow:${perm.allow} deny:${perm.deny}`;
-        }).join('\n') + '\n');
-      break;
-    case 'roles':
-      output = server.roles
-        .map(function (role) {
-          return(`・${role.name} => ${role.hexColor},
-            ${role.members.size} members ` + `${role.permissions}\n`);
-        });
-      break;
-    default:
-      //output
-      break;
-  }
-  Utils.notifyMe([`**Listing ${parameter} for server ${server.name}**\n`]
-    .concat(output), selfbot, '');
-};
-
-// Counts members that have a role
-commands.role = function (parameter, options, self) {
-  if (typeof parameter === 'undefined') return;
-
-  const server = self.guilds.get(options.serverId);
-  // Find valid roles, there might be multiples with the same name
-  const roleList = server.roles.filter(function (role) {
-    return role.name.toLowerCase() === parameter.toLowerCase(); });
- 
-  roleList.size === 0
-    ?options.originChannel.send(`'${parameter}' was not a valid role name.`)
-    :roleList.forEach(function (role) {
-      const memberSize = role.members.size;
-      const maxIndex = memberSize < ROLES_COL_THRESHOLD ? 1 : 2;
-      const len = Math.floor(ROLES_MESSAGE_WIDTH / (maxIndex + 1));
-      const usernames = role.members.map(function (member) {
-        return member.user.username; });
-      
-      options.originChannel.send(
-        ['```'].concat(             // Construct array of string bits
-        `'${role.name}' has ${memberSize} members\n`,
-        _.flow(
-          _.take(ROLES_MAX_DISPLAY), // Limit
-          _.chunk(maxIndex + 1),     // Group into columns
-          _.flatMap(function (line) { return _.flow(
-            _.take(maxIndex),        // Pad until except for last element
-            _.map(function (name) { return Utils.truncateAndPad(name, len); })
-            )(line) + line[maxIndex].substr(0, len) + '\n';
-          }))(usernames),
-        '```', memberSize <= ROLES_MAX_DISPLAY ? '' : '...\n'
-      ).join(''));                  // Join said array of strings
-    });
-};
-//*/
-
-// Import all the commands from {library} to be exported again
-/*function _import(library) {
-  Object.keys(library).forEach(function (newCommand) {
-    if (commands.hasOwnProperty(newCommand)) {
-      throw new SyntaxError(`Already registered the '${newCommand}' command`);
+    // Fails
+    if (parameter === '') {
+      failure = true; output = 'list - please specify channels, roles';
+    } else if (!Utils.isPersonal(options.originChannel)) {
+      failure = true; output = 'list - only available in personal channel';
+    } else if (server == undefined) {
+      failure = true; output = `list - invalid server id ${options.serverId}`;
     }
-    commands[newCommand] = library[newCommand];
-  });
-}*/
+    if (failure) {
+      output = 'Error: ' + output;
+      Utils.notifyMe([output], selfbot, '');
+      console.error(output);
+      return;
+    }
+    
+    switch (parameter.toLowerCase()) {
+      case 'channels':
+        output = server.channels.map(chan =>
+          `${chan.type === 'voice' ? '' : '#'}${chan.name}: \n`
+          + chan.permissionOverwrites.map(perm => {
+            const name = perm.type === 'role'
+              ? perm.channel.guild.roles.get(perm.id).name
+              : `<@${perm.channel.guild.members.get(perm.id).id}>`;
+            return `・${name} => allow:${perm.allow} deny:${perm.deny}`;
+          }).join('\n') + '\n');
+        break;
+      case 'roles':
+        output = server.roles
+          .map(function (role) {
+            return(`・${role.name} => ${role.hexColor},
+              ${role.members.size} members ` + `${role.permissions}\n`);
+          });
+        break;
+      default:
+        //output
+        break;
+    }
+    Utils.notifyMe([`**Listing ${parameter} for server ${server.name}**\n`]
+      .concat(output), selfbot, '');
+  }
+);
 
+Utils.addCommand('role', commands, help,
+  'role <fullTitle>',
+  'Counts and displays all the members in a table',
+  `  I forget if I put a max on the number of members to be displayed
+  Probably want to use verbose flag to toggle that...`, 
+  function (parameter, options, self) {
+    const server = self.guilds.get(options.serverId);
+    // Find valid roles, there might be multiples with the same name
+    const roleList = server.roles.filter(function (role) {
+      return role.name.toLowerCase() === parameter.toLowerCase(); });
+  
+    roleList.size === 0
+      ?options.originChannel.send(`'${parameter}' was not a valid role name.`)
+      :roleList.forEach(function (role) {
+        const memberSize = role.members.size;
+        const maxIndex = memberSize < ROLES_COL_THRESHOLD ? 1 : 2;
+        const len = Math.floor(ROLES_MESSAGE_WIDTH / (maxIndex + 1));
+        const usernames = role.members.map(function (member) {
+          return member.user.username; });
+        
+        options.originChannel.send(
+          ['```'].concat(             // Construct array of string bits
+          `'${role.name}' has ${memberSize} members\n`,
+          _.flow(
+            _.take(ROLES_MAX_DISPLAY), // Limit
+            _.chunk(maxIndex + 1),     // Group into columns
+            _.flatMap(function (line) { return _.flow(
+              _.take(maxIndex),        // Pad until except for last element
+              _.map(function (name) { return Utils.truncateAndPad(name, len); })
+              )(line) + line[maxIndex].substr(0, len) + '\n';
+            }))(usernames),
+          '```', memberSize <= ROLES_MAX_DISPLAY ? '' : '...\n'
+        ).join(''));                  // Join said array of strings
+      });
+  }
+);
+//*/
 module.exports = commands;

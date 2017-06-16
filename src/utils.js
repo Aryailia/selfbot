@@ -11,7 +11,7 @@ const MAX_MESSAGE_LENGTH = 2000; // Discord is 2000 a message
 const MAX_SEARCH_CLUSTER = 25;
 const FETCH_LIMIT = 100;
 
-const utils = {
+const Utils = {
   /**
    * @param {Channel} Channel The channel to check
    * @returns {boolean} True
@@ -41,10 +41,22 @@ const utils = {
     };
   },
 
-  addCommand: function (name, commands, help, documentation, handler) {
-    help[name] = documentation;
-    commands = function (parameter, options, client) {
-    //  if 
+  displayDetailedHelp: function (helpEntry, sender) {
+    sender(helpEntry.header + '\n' + helpEntry.body);
+  },
+
+  addCommand: function (name, commands, help,
+      format, description, documentation, handler) {
+    if (commands.hasOwnProperty(name)) { // Check if already added
+      throw new SyntaxError(`Already registered the '${name}' command`);
+    }
+    help[name] = { command: format, header: description, body: documentation };
+    commands[name] = function (parameter, options, client) {
+      if (options.help === true) { // Help flag overrules execution
+        Utils.displayDetailedHelp(help[name], options.originChannel.send);
+      } else {
+        handler(parameter, options, client);
+      }
     };
   },
 
@@ -87,7 +99,7 @@ const utils = {
         .then(deleteCount => deleteCount.reduce((x, y) => x + y, 0))
         .then(deletedSum => deletedSum === 0 && message.id === x[0].id
           ? x[0] // Case that nothing deleted and not traversing
-          : utils.deleteAfter(channel, x[1], count + deletedSum))
+          : Utils.deleteAfter(channel, x[1], count + deletedSum))
       );
   },
 
@@ -169,9 +181,9 @@ const utils = {
   },
 
   truncateAndPad: function (str, targetLength) {
-    const trunc = utils.truncate(str, targetLength);
+    const trunc = Utils.truncate(str, targetLength);
     return trunc + (new Array(targetLength - trunc.length).join(' '));
   },
 };
 
-module.exports = utils;
+module.exports = Utils;

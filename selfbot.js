@@ -26,7 +26,7 @@ selfbot.on('ready', () => {
 });
 
 selfbot.on('message', function (msg) {
-  if (msg.author.id !== selfbot.user.id) { return; } // Only respond to myself
+  //if (msg.author.id !== selfbot.user.id) { return; } // Only respond to myself
   const commandMatch = botwrapper
     .checkCommandFormat(config.prefix).exec(msg.content);
   if (commandMatch === null) { return; } // Not a valid command format
@@ -36,27 +36,31 @@ selfbot.on('message', function (msg) {
     const parameterMatch = typeof commandMatch[2] === 'undefined'
       ? null
       : imports.parse.matchArgs.exec(commandMatch[2]);
-    const setFlag = imports.parse.flagSetters;
 
     // Options and defaults
     const options = Object.create(null);
     options.originChannel = msg.channel;
+    options.bulkSend = botwrapper.massMessage;
+    options.personal = personal;
     //options.serverId = msg.channel.guild.id;
+
     // Process the flags to set options
+    const setFlag = imports.parse.flagSetters;
     if (parameterMatch !== null) {
       imports.parse.flagList.reduce((protoOptions, flag) => {
         const flagMatch = imports.parse[flag].exec(parameterMatch[1]);
         if (flagMatch !== null) {
           setFlag[flag](protoOptions, flagMatch[1]); // Mutates {protoOptions}
         }
+        //console.log('flagMatch', flag, flagMatch);
         return protoOptions;
       }, options);
     }
     
     const command = commandMatch[1];
-    const arg = parameterMatch === null ?'' :parameterMatch[2];
+    const arg = parameterMatch === null ? '' : parameterMatch[2];
     
-    //if (IS_DEVELOPMENT) {
+    //if (false) {
     //  console.log('commandMatch', commandMatch);
     //  console.log('parameterMatch', parameterMatch);
     //  console.log('commnad', command);

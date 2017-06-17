@@ -26,7 +26,7 @@ selfbot.on('ready', () => {
 });
 
 selfbot.on('message', function (msg) {
-  //if (msg.author.id !== selfbot.user.id) { return; } // Only respond to myself
+  if (msg.author.id !== selfbot.user.id) { return; } // Only respond to myself
   const commandMatch = botwrapper
     .checkCommandFormat(config.prefix).exec(msg.content);
   if (commandMatch === null) { return; } // Not a valid command format
@@ -42,7 +42,7 @@ selfbot.on('message', function (msg) {
     options.originChannel = msg.channel;
     options.bulkSend = botwrapper.massMessage;
     options.personal = personal;
-    options.serverId = msg.channel.guild.id;
+    //options.serverId = msg.channel.guild.id;
 
     // Process the flags to set options
     const setFlag = imports.parse.flagSetters;
@@ -62,13 +62,13 @@ selfbot.on('message', function (msg) {
       ? ''
       : (parameterMatch[2] == null ? '' : parameterMatch[2]);
     
-    //if (false) {
-    //  console.log('commandMatch', commandMatch);
-    //  console.log('parameterMatch', parameterMatch);
-    //  console.log('commnad', command);
-    //  console.log('arg    ', arg);
-    //  console.log('options', options);
-    //}
+    if (IS_DEVELOPMENT && Discord.psuedo) {
+      console.log('commandMatch', commandMatch);
+      console.log('parameterMatch', parameterMatch);
+      console.log('commnad', command);
+      console.log('arg    ', arg);
+      console.log('options', options);
+    }
 
     if (imports.commands.hasOwnProperty(command)) {
       imports.commands[command](arg, options, selfbot);

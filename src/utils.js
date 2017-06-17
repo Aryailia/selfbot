@@ -41,8 +41,8 @@ const Utils = {
     };
   },
 
-  displayDetailedHelp: function (helpEntry, sender) {
-    sender(helpEntry.header + '\n' + helpEntry.body);
+  displayDetailedHelp: function (help, channel) {
+    channel.send(`**${help.command}**\n${help.header}\n${help.body}`);
   },
 
   addCommand: function (name, commands, help,
@@ -53,11 +53,18 @@ const Utils = {
     help[name] = { command: format, header: description, body: documentation };
     commands[name] = function (parameter, options, client) {
       if (options.help === true) { // Help flag overrules execution
-        Utils.displayDetailedHelp(help[name], options.originChannel.send);
+        Utils.displayDetailedHelp(help[name], options.originChannel);
       } else {
-        handler(parameter, options, client);
+        handler(parameter, options, client, name);
       }
     };
+  },
+
+  // Makes use of dynobot to alert myself in private channel
+  alert: function (message, client) {
+    const channel = client.guilds.get(personalChannel.server)
+      .channels.get(personalChannel.channel);
+    channel.send(`?alert ${message.replace(/\s/g, '_')}`);
   },
 
   /**
@@ -79,28 +86,42 @@ const Utils = {
       result.messages.reduce((x, y) => x.concat(y), []));
   },
 
-  deleteAfter: function (channel, message, count = 0) {
-    console.log(message.content);
-    return channel.fetchMessages({limit: FETCH_LIMIT, after: message.id})
-      .then(messageList => [
-        // 0. D 
-        messageList
-          .filter(message => !message.deletable)
-          .reduce((last, msg) => (msg.createdTimestamp > last.createdTimestamp 
-            ? msg
-            : last), message),
-        // 1. Delete and give the amount of delete mesages
-        messageList
-          .filter(message => message.deletable)
-          .map(message => message.delete(0).then(() => 1, () => 0))
-      ])
+  
+  delete: function (message) {
+    return message.delete(0).then(
+      function () { return 1; },
+      function () { return 0; }
+    );
+  },
 
-      .then(x => Promise.all(x[1])
-        .then(deleteCount => deleteCount.reduce((x, y) => x + y, 0))
-        .then(deletedSum => deletedSum === 0 && message.id === x[0].id
-          ? x[0] // Case that nothing deleted and not traversing
-          : Utils.deleteAfter(channel, x[1], count + deletedSum))
-      );
+  // Utilizes the search command, or fetchMessages method to delete messages
+  // Uses {message} as the reference point to delete all messages after
+  deleteMessages: function (channel, message, predicate) {
+    // First delete all messages after {message}
+    return channel.fetchMessages({after: message.id}).then(function (msgList) {
+      if (msgList.size === 0) { // Terminating condition
+        return 0; // No more messages after so return zero
+      }
+
+      const lastMessage = msgList.values().next().value;
+      const deletions = msgList // Delete all excluding {lastMessage}
+        .filter(function (msg) { return msg.deletable; })
+        .filter(predicate)
+        .filter(function (msg) { return msg.id !== lastMessage.id; })
+        .map(Utils.delete);
+      
+      // Return number of deletions successfully performed
+      return Promise.all(deletions).then(function (count) { // Sum
+        return count.reduce(function (a, x) { return a + x; }, 0);
+      }).then(function (total) { // Then delete using {lastMessage} as new base
+        return(Utils.deleteMessages(channel, lastMessage, predicate)
+          .then(function (x) { return total + x; })); // Sum with old total
+      });
+    // Then delete {message} now that everything after is deleted
+    }).then(function (deletionCount) {
+      return(Utils.delete(message)
+        .then(function (x) { return deletionCount + x; }));
+    });
   },
 
   /**

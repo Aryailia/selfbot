@@ -13,8 +13,10 @@ const flagSetters = {
     options.serverId = parameter;
   }, 'v': function (options) {
     options.verbose = true;
-  }, 't': function (options) {
-    options.test = 'i do things';
+  }, 'u': function (options, parameter) {
+    options.userId = parameter;
+  }, 'p': function (options, parameter) {
+    options.parameter = parameter;
   }
 };
 

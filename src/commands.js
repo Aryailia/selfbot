@@ -35,21 +35,21 @@ Utils.addCommand('help', commands, help,
 
   You can set the -h flag after an actual command to display specific info as well`,
   function (parameter, options) {
-    const sendMessage = options.originChannel.send;
+    const channel = options.originChannel;
     if (parameter === '') { // General help message is print all the headers
       const messages = _.map(function (commandName) {
         return `**${config.prefix}${commandName}** ${help[commandName].header}`;
       }, Object.keys(help));
-      sendMessage(_.sortBy(x => x, messages).join('\n'));
+      channel.send(_.sortBy(x => x, messages).join('\n'));
     } else {
       if (!commands.hasOwnProperty(parameter)) {
-        sendMessage(`Error: No help command named '${parameter}'`);
+        channel.send(`Error: No help command named '${parameter}'`);
         console.error(`Error: No help command named '${parameter}'`);
       } else if (!help.hasOwnProperty(parameter)) {
-        sendMessage(`Error: No help entry for '${parameter}'`);
+        channel.send(`Error: No help entry for '${parameter}'`);
         console.error(`Error: No help entry for '${parameter}'`);
       } else {
-        Utils.displayDetailedHelp(help[parameter], sendMessage);
+        Utils.displayDetailedHelp(help[parameter], channel);
       }
     }
   }
@@ -64,43 +64,59 @@ Utils.addCommand('ping', commands, help,
   }
 );
 
+Utils.addCommand('makesample', commands, help,
+  'makesample <length>',
+  'Generates an <length>-long conversation. Only availabe in personal.',
+  '  <length> must be between 1 and 100',
+  function (parameter, options, client, name) {
+    const length = parseInt(parameter);
+    //if (!Utils.isPersonal(options.originChannel)) {
+    //  Utils.alert('Only available in private channel', selfbot);
+    //  return;
+    //}
 
-  //test: function (serverId, options, selfbot) {
-    //Utils.getLatestMessages(selfbot.user.id, 25, selfbot.guilds.get(serverId))
-    //  .then(messages => {
-    //    const output = messages.map(msg => msg.content);
-    //    Utils.notifyMe(output, selfbot, '```');
-    //  });
-    
-    //console.log(selfbot.guilds.get(serverId).icon);
-    //console.log(selfbot.guilds.get(serverId).iconURL);
-  //},
-// Deletes any messages from a specified ID onwards
-  // At the moment this command doesn't check if any of the deletes were
-  // successful and and tally those, eg. won't catch random network errors
-  // Does handle not having permission to delete.
-  //prune: function (messageId, channel, self) {
-  //  const guildId = channel.guild.id;
-  //  Utils.findMessageById(self.guilds.get(guildId), messageId).then(
-  //    // Success so start the deleteing
-  //    message => 
-  //      Utils.deleteAfter(message.channel, message)
-  //      .then(count => {
-  //        if (message.deletable) {
-  //          message.delete(0);
-  //          return count + 1;
-  //        } else {
-  //          return count;
-  //        }
-  //        
-  //      }).then(count =>
-  //        Utils.notifyMe(`Tried to clear ${count} messages.`, self, '')),
-  //      
-  //    // Couldn't find message with id
-  //    () => Utils.notifyMe(`Message ${messageId} not found.`, self, '')
-  //    
-  //  );
-  //},
+    const channel = options.originChannel;
+    if (parameter === '' || 100 < length && length < 0) {
+      channel.send(`${config.prefix_literal}${name} -h`);
+    } else {
+      for (let i = 0; i < length; ++i) {
+        channel.send(i);
+        //channel.send('?flipcoin');
+      }
+    }
+  }
+);
+commands.ms = commands.makesample; // Alias
+
+Utils.addCommand('prune', commands, help,
+  'prune [-u <userId>] [-g <serverId>] <messageId>',
+  'Deletes all messages from <messageId> to the present.',
+  '  If you set the -u flag, this will only prune messages sent by <userId>',
+  function (messageId, options, client, name) {
+    const channel = options.originChannel;
+    const server = client.guilds.get(options.serverId);
+    if (messageId === '') { // Requires a parameter
+      channel.send(`${config.prefix_literal}${name} -h`);
+      return;
+    }
+
+    // For use by Util.deleteMessages()'s filter
+    const predicate = server.members.has(options.userId)
+      ? function (msg) { return msg.author.id === options.userId; }
+      : function () { return true; }; // Always true, ie. filters nothing
+
+    // First find the message (and channel) within {server} by id
+    Utils.findMessageById(server, messageId).then(function (message) {
+      // Then try to delete
+      Utils.deleteMessages(message.channel, message, predicate)
+        .then(function (x) { channel.send(`Cleared ${x} messages.`); });
+    // Otherwise give error feedback
+    }).catch(function (err) {
+      console.error(`-----\nError: ${name}\n${err}`);
+      channel.send(`Error: message with id '${messageId}' not found`);
+    });
+  }
+);
 
 Utils.addCommand('survey', commands, help,
   'survey <sharedServerCount = 2>',

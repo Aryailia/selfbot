@@ -42,7 +42,7 @@ selfbot.on('message', function (msg) {
     options.originChannel = msg.channel;
     options.bulkSend = botwrapper.massMessage;
     options.personal = personal;
-    //options.serverId = msg.channel.guild.id;
+    options.serverId = msg.channel.guild.id;
 
     // Process the flags to set options
     const setFlag = imports.parse.flagSetters;
@@ -58,7 +58,9 @@ selfbot.on('message', function (msg) {
     }
     
     const command = commandMatch[1];
-    const arg = parameterMatch === null ? '' : parameterMatch[2];
+    const arg = parameterMatch == null
+      ? ''
+      : (parameterMatch[2] == null ? '' : parameterMatch[2]);
     
     //if (false) {
     //  console.log('commandMatch', commandMatch);

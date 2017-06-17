@@ -1,5 +1,25 @@
 'use strict';
 
+/**
+ * @todo Add command categories for help
+ * @todo fix seperator for command format in botwrapper
+ * @todo login to set sender token for psuedodiscord
+ * @todo message delete for pseudodiscord
+ * @todo Currently finished functionality with
+ * - ping
+ * - makesample
+ * - prune
+ * @todo Need to refactor
+ * - survey
+ * - stalk
+ * @todo Features still in progress
+ * - help
+ * - list (mostly complete, though lots to do if i make permission converter)
+ * - role (add verbose)
+ * @todo plans
+ * - permission converter
+ */
+
 const path = require('path');
 const IS_DEVELOPMENT = process.argv[2] != undefined &&
   process.argv[2].trim().toLowerCase() === 'development';

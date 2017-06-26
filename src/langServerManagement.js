@@ -1,14 +1,8 @@
 // Modules
-const path = require('path');
 const IS_DEVELOPMENT = process.argv[2] != undefined &&
   process.argv[2].trim().toLowerCase() === 'development';
-
-if (IS_DEVELOPMENT) {
-  delete require.cache[path.resolve('./src/utils.js')];
-  delete require.cache[path.resolve('./src/fp.js')];
-}
-const Utils = require(path.resolve('./src/utils.js'));
-const _ = require(path.resolve('./src/fp.js'));
+const Utils = require('./utils.js');
+const _ = require('./fp.js');
 
 // Code Body
 const _rolePrefixList = ['Learning', 'Heritage', 'Fluent', 'Native'];
@@ -111,6 +105,32 @@ function commands(addCommand) {
         )(list2);
         roleList.forEach(function (role) { // Assign color
           role.setColor(colorHash[role.name.split(' ')[1]]);
+        });
+      });
+    }
+  );
+
+  addCommand('langstonadeko', ['Language Server'],
+    '',
+    'Adds all the language roles to nadeko',
+    `Adds all the language roles to nadeko
+    Prefixes are ${_rolePrefixList.join(', ')}
+    Excludes are ${_roleIgnoreList.join(', ')}`,
+    function (parameter, options, self, name) {
+      const channel = options.originChannel;
+      const list1 = _rolePrefixList;
+      const list2 = _getColoringLanguageRoles(channel.guild);
+      
+      const roleCollection = channel.guild.roles;
+      list1.forEach(function (type) {
+        var roleList = _.flow( // Get all the roles that are `${list1} ${list2}`
+          _.map(function (lang) {
+            return roleCollection.find('name', `${type} ${lang}`);
+          }),
+          _.filter(function (role) { return role != undefined; })
+        )(list2);
+        roleList.forEach(function (role) { // Assign color
+          channel.send(`.asar ${role.name}`);
         });
       });
     }

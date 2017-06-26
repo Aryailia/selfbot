@@ -34,24 +34,23 @@ const ROLES_MESSAGE_WIDTH = 60;
 const ROLES_MAX_DISPLAY = 99;
 const ROLES_COL_THRESHOLD = 60; // Inclusive threshold afer which we bump to 3 columns
 
-const library = Helper.setupCommands(function (name, lib) {
-  /*function (parameter, options, client) {
+const library = Helper.setupCommands(
+  // Same arguments as regular command just with two extra parameters before
+  function (lib, name, parameter, options) {
     if (options.help === true) { // Help flag overrules execution
-      Utils.displayDetailedHelp(help[name], options.originChannel);
+      options.help = false;
+      lib.commands.help(name, options);
+      return false;
     } else {
-      handler(parameter, options, client, name);
+      return true;
     }
-  };*/
-   //if (options.help === true) { // Help flag overrules execution
-   // lib.commands.displayDetailedHelp(help[name], options.originChannel);
-  //}
-  return true;
-});
-const help = library.help;
-const commands = library.commands;
-langServer(commands, help);
+  },
+  config.prefix_literal
+);
+langServer(library.addCommand);
 
-library.addCommand('help2', ['Regular'], ' [<command>]',
+library.addCommand('help', ['Regular'],
+  ' [<command>]',
   'For seeing the documentation',
   `Lists the documentation for each function
   Valid forms are:
@@ -61,49 +60,21 @@ library.addCommand('help2', ['Regular'], ' [<command>]',
 
   You can set the -h flag after an actual command to display specific info as well`,
   function (parameter, options) {
-    Helper.defaultHelp(library, true, false, parameter, options.originChannel);
+    var name = parameter.toLowerCase();
+    Helper.defaultHelp(library, true, true, name, options.originChannel);
   }
 );
 
-Utils.addCommand('help', commands, help,
-  'help',
-  'Lists ',
-  `  Valid forms are:
-  - help
-  - help <command>
-  eg. help ping
-
-  You can set the -h flag after an actual command to display specific info as well`,
-  function (parameter, options) {
-    const channel = options.originChannel;
-    if (parameter === '') { // General help message is print all the headers
-      const messages = _.map(function (commandName) {
-        return `**${config.prefix}${commandName}** ${help[commandName].header}`;
-      }, Object.keys(help));
-      channel.send(_.sortBy(x => x, messages).join('\n'));
-    } else {
-      if (!commands.hasOwnProperty(parameter)) {
-        channel.send(`Error: No help command named '${parameter}'`);
-        console.error(`Error: No help command named '${parameter}'`);
-      } else if (!help.hasOwnProperty(parameter)) {
-        channel.send(`Error: No help entry for '${parameter}'`);
-        console.error(`Error: No help entry for '${parameter}'`);
-      } else {
-        Utils.displayDetailedHelp(help[parameter], channel);
-      }
-    }
-  }
-);
-
-library.addCommand('ping', ['Regular'], '',
+library.addCommand('ping', ['Regular'],
+  '',
   'For testing. Should respond with \'pong\'.',
   'To test if the bot is working. Should respond with \'pong\'.',
   function (parameter, options) {
     options.originChannel.send('pong');
   }
 );
-/*
-library.addCommand('makesample', ['Personal', 'Development'], ' <length>',
+
+library.addCommand('makesample', ['Personal', 'Development'],
   'makesample <length>',
   'Generates a specifiable length of conversation. For testing.',
   `Generates an <length>-long conversation. Only availabe in personal.
@@ -125,35 +96,14 @@ library.addCommand('makesample', ['Personal', 'Development'], ' <length>',
       }
     }
   }
-);*/
-Utils.addCommand('makesample', commands, help,
-  'makesample <length>',
-  'Generates an <length>-long conversation. Only availabe in personal.',
-  '  <length> must be between 1 and 100',
-  function (parameter, options, client, name) {
-    const length = parseInt(parameter);
-    //if (!Utils.isPersonal(options.originChannel)) {
-    //  Utils.alert('Only available in private channel', selfbot);
-    //  return;
-    //}
-
-    const channel = options.originChannel;
-    if (parameter === '' || 100 < length && length < 0) {
-      channel.send(`${config.prefix_literal}${name} -h`);
-    } else {
-      for (let i = 0; i < length; ++i) {
-        channel.send(i);
-        //channel.send('?flipcoin');
-      }
-    }
-  }
 );
-commands.ms = commands.makesample; // Alias
+library.commands.ms = library.commands.makesample; // Alias
 
-Utils.addCommand('prune', commands, help,
-  'prune [-u <userId>] [-g <serverId>] <messageId>',
+library.addCommand('prune', ['Regular'],
+  ' [-u <userId>] [-g <serverId>] <messageId>',
   'Deletes all messages from <messageId> to the present.',
-  '  If you set the -u flag, this will only prune messages sent by <userId>',
+  `Deletes all messages from <messageId> to the present.
+  If you set the -u flag, this will only prune messages sent by <userId>`,
   function (messageId, options, client, name) {
     const channel = options.originChannel;
     const server = client.guilds.get(options.serverId);
@@ -180,8 +130,8 @@ Utils.addCommand('prune', commands, help,
   }
 );
 
-Utils.addCommand('survey', commands, help,
-  'survey <sharedServerCount = 2>',
+library.addCommand('survey', ['Regular'],
+  ' <sharedServerCount = 2>',
   'Finds all users that share ',
   `
   `,
@@ -212,10 +162,11 @@ Utils.addCommand('survey', commands, help,
   }
 );
 
-Utils.addCommand('stalk', commands, help,
+library.addCommand('stalk', ['Regular'],
   'stalk <userID>',
-  'Finds the last 25 messages made by the user <userID> in all servers you are in',
-  '',
+  'Finds the last 25 messages made by a user in all shared servers',
+  `Finds the last 25 messages made by the user <userID> in all servers you are in
+  `,
   function (id, options, self) {
     // Going through the guilds to avoid caching issues of client.users
     const query = self.guilds.find(server =>(server.member(id) !== null));
@@ -251,13 +202,13 @@ Utils.addCommand('stalk', commands, help,
   }
 );
 
-Utils.addCommand('list', commands, help,
+library.addCommand('list', ['Regular', 'Personal'],
   'list -g <guildId> <parameter>',
   'Lists out information related to the server',
-  `  Only can be used in personal text channel
+  `Lists out information related to the server.
   Available options for parameter are:
   - channels
-  - roles`, 
+  - roles`,
   function (parameter, options, selfbot) {
     let output = '';
     let failure = false;
@@ -305,11 +256,11 @@ Utils.addCommand('list', commands, help,
   }
 );
 
-Utils.addCommand('role', commands, help,
+library.addCommand('role', ['Regular', 'Broken'],
   'role <fullTitle>',
   'Counts and displays all the members in a table',
   `  I forget if I put a max on the number of members to be displayed
-  Probably want to use verbose flag to toggle that...`, 
+  Probably want to use verbose flag to toggle that...`,
   function (parameter, options, self) {
     const server = self.guilds.get(options.serverId);
     // Find valid roles, there might be multiples with the same name
@@ -342,4 +293,4 @@ Utils.addCommand('role', commands, help,
   }
 );
 //*/
-module.exports = commands;
+module.exports = library.commands;

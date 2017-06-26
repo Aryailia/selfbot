@@ -70,7 +70,7 @@ selfbot.on('message', function (msg) {
   }
 
   if (imports.commands.hasOwnProperty(command)) {
-    imports.commands[command](arg, options, selfbot);
+    imports.commands[command](arg, options, selfbot, command);
     msg.delete(); // Delete command since it's valid
   }
 });

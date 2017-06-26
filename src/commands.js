@@ -20,30 +20,50 @@
  * - permission converter
  */
 
-const path = require('path');
 const IS_DEVELOPMENT = process.argv[2] != undefined &&
   process.argv[2].trim().toLowerCase() === 'development';
 
-const imports = {};
-if (IS_DEVELOPMENT) {
-  delete require.cache[path.resolve('./src/utils.js')];
-  delete require.cache[path.resolve('./src/config.json')];
-  delete require.cache[path.resolve('./src/langServerManagement.js')];
-  delete require.cache[path.resolve('./src/fp.js')];
-}
-const Utils = require(path.resolve('./src/utils.js'));
-const config = require(path.resolve('./src/config.json'));
-const _ = require(path.resolve('./src/fp.js'));
-imports.langServer = require(path.resolve('./src/langServerManagement.js'));
+const Utils = require('./utils.js');
+const Helper = require('../lib/bothelpers/botwrapper.js');
+const config = require('./config.json');
+const _ = require('./fp.js');
+const langServer = require('./langServerManagement.js');
 const IGNORE_LIST = config.ignore_server;
 
 const ROLES_MESSAGE_WIDTH = 60;
 const ROLES_MAX_DISPLAY = 99;
 const ROLES_COL_THRESHOLD = 60; // Inclusive threshold afer which we bump to 3 columns
 
-const help = {};
-const commands = {};
-imports.langServer(commands, help);
+const library = Helper.setupCommands(function (name, lib) {
+  /*function (parameter, options, client) {
+    if (options.help === true) { // Help flag overrules execution
+      Utils.displayDetailedHelp(help[name], options.originChannel);
+    } else {
+      handler(parameter, options, client, name);
+    }
+  };*/
+   //if (options.help === true) { // Help flag overrules execution
+   // lib.commands.displayDetailedHelp(help[name], options.originChannel);
+  //}
+  return true;
+});
+const help = library.help;
+const commands = library.commands;
+langServer(commands, help);
+
+library.addCommand('help2', ['Regular'], ' [<command>]',
+  'For seeing the documentation',
+  `Lists the documentation for each function
+  Valid forms are:
+  - help
+  - help <command>
+  eg. help ping
+
+  You can set the -h flag after an actual command to display specific info as well`,
+  function (parameter, options) {
+    Helper.defaultHelp(library, true, false, parameter, options.originChannel);
+  }
+);
 
 Utils.addCommand('help', commands, help,
   'help',
@@ -75,15 +95,37 @@ Utils.addCommand('help', commands, help,
   }
 );
 
-Utils.addCommand('ping', commands, help,
-  'ping',
-  'To test if the bot is working',
-  'Should respond with \'pong\'.',
+library.addCommand('ping', ['Regular'], '',
+  'For testing. Should respond with \'pong\'.',
+  'To test if the bot is working. Should respond with \'pong\'.',
   function (parameter, options) {
     options.originChannel.send('pong');
   }
 );
+/*
+library.addCommand('makesample', ['Personal', 'Development'], ' <length>',
+  'makesample <length>',
+  'Generates a specifiable length of conversation. For testing.',
+  `Generates an <length>-long conversation. Only availabe in personal.
+  <length> must be between 1 and 100`,
+  function (parameter, options, client, name) {
+    const length = parseInt(parameter);
+    //if (!Utils.isPersonal(options.originChannel)) {
+    //  Utils.alert('Only available in private channel', selfbot);
+    //  return;
+    //}
 
+    const channel = options.originChannel;
+    if (parameter === '' || 100 < length && length < 0) {
+      channel.send(`${config.prefix_literal}${name} -h`);
+    } else {
+      for (let i = 0; i < length; ++i) {
+        channel.send(i);
+        //channel.send('?flipcoin');
+      }
+    }
+  }
+);*/
 Utils.addCommand('makesample', commands, help,
   'makesample <length>',
   'Generates an <length>-long conversation. Only availabe in personal.',

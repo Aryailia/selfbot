@@ -2,7 +2,7 @@
 
 // Always Load
 const Discord = require('discord.js');
-//const Discord = require('./lib/bothelpers/psuedodiscord.js');
+// const Discord = require('./lib/bothelpers/psuedodiscord.js');
 const config = require('./src/config.json');
 const personal = require('./personal/personal.json');
 const Helper = require('./lib/bothelpers/botwrapper.js');
@@ -14,8 +14,9 @@ const imports = Helper.conditionalLoader(IS_DEVELOPMENT, {
   commands: require.resolve('./src/commands.js'),
   parse: require.resolve('./src/flags.js'),
 });
-imports.staticLoadIfNotDev();
+imports.staticOnFalse();
 
+// Login
 const selfbot = new Discord.Client({ bot: false }); // Is self-bot
 selfbot.login(personal.self_token);
 
@@ -27,21 +28,27 @@ selfbot.on('ready', () => {
 selfbot.on('message', function (msg) {
   if (msg.author.id !== selfbot.user.id) { return; } // Only respond to myself
   const commandMatch = Helper
-    .checkCommandFormat(config.prefix).exec(msg.content);
+    .validateParseCommand(config.prefix, Helper.REGEX_SPACE, msg.content);
   if (commandMatch === null) { return; } // Not a valid command format
 
-  imports.dynamicLoadIfDev();
+  imports.dynamicOnTrue();
   // Now break the parameter into flag and main
   const parameterMatch = typeof commandMatch[2] === 'undefined'
     ? null
     : imports.parse.matchArgs.exec(commandMatch[2]);
 
-  // Options and defaults
-  const options = Object.create(null);
-  options.originChannel = msg.channel;
-  options.bulkSend = Helper.massMessage;
-  options.personal = personal;
-  options.serverId = msg.channel.guild.id;
+  // Options and defaults (may be overwritten by flags)
+  const options = {
+    // Stuff that should not change
+    origin: msg.channel,
+    author: msg.author, // Discord.user
+    member: msg.member, // Discord.guildMember
+    self: selfbot,
+
+    // Stuff that is okay to be overwritten by flags
+    channel: msg.channel,
+    serverId: msg.channel.guild.id,
+  }
 
   // Process the flags to set options
   const setFlag = imports.parse.flagSetters;
@@ -55,23 +62,29 @@ selfbot.on('message', function (msg) {
       return protoOptions;
     }, options);
   }
-  
+
   const command = commandMatch[1];
   const arg = parameterMatch == null
     ? ''
     : (parameterMatch[2] == null ? '' : parameterMatch[2]);
   
-  if (IS_DEVELOPMENT && Discord.psuedo) {
-    console.log('commandMatch', commandMatch);
-    console.log('parameterMatch', parameterMatch);
-    console.log('commnad', command);
-    console.log('arg    ', arg);
-    console.log('options', options);
-  }
+  // if (IS_DEVELOPMENT === true && Discord.psuedo === true) {
+  //   console.log('commandMatch', commandMatch);
+  //   console.log('parameterMatch', parameterMatch);
+  //   console.log('commnad', command);
+  //   console.log('arg    ', arg);
+  //   console.log('options', options);
+  // }
 
-  if (imports.commands.hasOwnProperty(command)) {
-    imports.commands[command](arg, options, selfbot, command);
-    msg.delete(); // Delete command since it's valid
+  // Execute the command
+  try {
+    if (imports.commands.run(command, arg, options) != false) {
+      // msg.delete(); // Delete if valid command
+    } else {
+      console.error('an error! nooooo');
+    }
+  } catch (err) {
+    console.error(err);
   }
 });
 //*/

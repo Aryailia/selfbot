@@ -34,20 +34,40 @@ const ROLES_MESSAGE_WIDTH = 60;
 const ROLES_MAX_DISPLAY = 99;
 const ROLES_COL_THRESHOLD = 60; // Inclusive threshold afer which we bump to 3 columns
 
-const library = Helper.setupCommands(
+const fp = require('../lib/bothelpers/fp');
+const personal = require('../personal/personal.json');
+//const personal = require('../personal/personal.json');
+const PERMISSION_SELF = [
+  { type: Helper.PERM_TYPE_USER, value: personal.self_id, level: 1 }];
+// const PERMISSION_PRIVATE = [...PERMISSION_SELF,
+//   { type: Helper.PERMTYPE}];
+
+
+const library = Helper.makeLibrary(
   // Same arguments as regular command just with two extra parameters before
-  function (lib, name, parameter, options) {
+  function detailedHelp(lib, name, parameter, options) {
     if (options.help === true) { // Help flag overrules execution
       options.help = false;
-      lib.commands.help(name, options);
-      return false;
+      library.run('help', name, options);
+      return false; // Halt regular execution
     } else {
-      return true;
+      return true; // Continue with regular execution of commands
     }
   },
   config.prefix_literal
 );
-langServer(library.addCommand);
+//langServer(library.addCommand);
+
+library.addCommand('ping', ['Regular'],
+  '',
+  'For testing. Should respond with \'pong\'.',
+  'To test if the bot is working. Should respond with \'pong\'.',
+  PERMISSION_SELF,
+  function (parameter, options) {
+    options.origin.send('pong');
+    return true; // return success
+  }
+);
 
 library.addCommand('help', ['Regular'],
   ' [<command>]',
@@ -59,18 +79,13 @@ library.addCommand('help', ['Regular'],
   eg. help ping
 
   You can set the -h flag after an actual command to display specific info as well`,
+  PERMISSION_SELF,
   function (parameter, options) {
-    var name = parameter.toLowerCase();
-    Helper.defaultHelp(library, true, true, name, options.originChannel);
-  }
-);
-
-library.addCommand('ping', ['Regular'],
-  '',
-  'For testing. Should respond with \'pong\'.',
-  'To test if the bot is working. Should respond with \'pong\'.',
-  function (parameter, options) {
-    options.originChannel.send('pong');
+    // channel, author, member, commandName, strict, combine
+    const command = parameter.toLowerCase();
+    const {origin, author, member} = options;
+    library.defaultHelp(origin, author, member, command, true, true);
+    return true;
   }
 );
 
@@ -79,37 +94,45 @@ library.addCommand('makesample', ['Personal', 'Development'],
   'Generates a specifiable length of conversation. For testing.',
   `Generates an <length>-long conversation. Only availabe in personal.
   <length> must be between 1 and 100`,
-  function (parameter, options, client, name) {
+  PERMISSION_SELF,
+  function (parameter, options) {
     const length = parseInt(parameter);
     //if (!Utils.isPersonal(options.originChannel)) {
     //  Utils.alert('Only available in private channel', selfbot);
     //  return;
     //}
 
-    const channel = options.originChannel;
+    const channel = options.origin;
+    const toSpam = options.parameter == null
+      ? 'ping'
+      : options.parameter;
     if (parameter === '' || 100 < length && length < 0) {
-      channel.send(`${config.prefix_literal}${name} -h`);
+      channel.send(`${config.prefix_literal}${toSpam} -h`);
     } else {
       for (let i = 0; i < length; ++i) {
         channel.send(i);
         //channel.send('?flipcoin');
       }
     }
+    return true;
   }
 );
-library.commands.ms = library.commands.makesample; // Alias
+// library.commands.ms = library.commands.makesample; // Alias
+library.alias('ms', 'makesample')
 
 library.addCommand('prune', ['Regular'],
   ' [-u <userId>] [-g <serverId>] <messageId>',
   'Deletes all messages from <messageId> to the present.',
   `Deletes all messages from <messageId> to the present.
   If you set the -u flag, this will only prune messages sent by <userId>`,
-  function (messageId, options, client, name) {
-    const channel = options.originChannel;
+  PERMISSION_SELF,
+  function (messageId, options, name) {
+    const client = options.self;
+    const channel = options.origin;
     const server = client.guilds.get(options.serverId);
     if (messageId === '') { // Requires a parameter
       channel.send(`${config.prefix_literal}${name} -h`);
-      return;
+      return;// false;
     }
 
     // For use by Util.deleteMessages()'s filter
@@ -127,41 +150,84 @@ library.addCommand('prune', ['Regular'],
       console.error(`-----\nError: ${name}\n${err}`);
       channel.send(`Error: message with id '${messageId}' not found`);
     });
+
+    return true;
   }
 );
 
 library.addCommand('survey', ['Regular'],
-  ' <sharedServerCount = 2>',
-  'Finds all users that share ',
+// const MIN = 2; // Minimum shared guild count
+  ' [-g <guildId>] <sharedServerCount = 2>',
+  'Finds all users that share servers with me',
   `
   `,
-  function (serverID, options, selfbot) {
-    const VERBOSE = false;
-    const MIN = 2; // Minimum shared guild count
-    const target = selfbot.guilds.get(serverID);
+  PERMISSION_SELF,
+  function (parameter, options) {
+    const min = parameter === '' ? '2' : parameter;
+    const {self, serverId} = options;
+    const target = self.guilds.get(serverId);
     
-    Utils.notifyMe(`**Finding friends in '${target.name}'**`, selfbot, '');
+    Utils.notifyMe(`**Finding friends in '${target.name}'**`, self, '');
 
     // Mapping to profiles to get at mutualGuilds
     const profileList = target.members
-      .filter(member => member.id !== selfbot.user.id && !member.user.bot)
+      .filter(member => member.id !== self.user.id && !member.user.bot)
       .map(member => member.user.fetchProfile());
-    Promise.all(profileList)
-      .then(member => member
-        .filter(profile => profile.mutualGuilds
-          .filter(guild =>!IGNORE_LIST.hasOwnProperty(guild)).size >= MIN)
-        .map(profile => {
-          const user = profile.user;
-          const start = `${user.username} ${user.id} is in`;
-          const guilds = profile.mutualGuilds;
-          return(VERBOSE
-            ? `${start} ${guilds.map(server => server.name).join(', ')}\n\n`
-            : `${start} ${guilds.size} servers\n`);
-        }))
-      .then(output => Utils.notifyMe(output, selfbot, '```'));
+    const friendCandidates = Promise.all(profileList).then(
+      member => member
+      .filter(member => member.mutualGuilds
+        .filter(guild =>!IGNORE_LIST.hasOwnProperty(guild)).size >= min)
+      .map(profile => {
+        const user = profile.user;
+        const start = `${user.username} ${user.id} is in`;
+        const guilds = profile.mutualGuilds;
+        return(options.verbose
+          ? `${start} ${guilds.map(server => server.name).join(', ')}\n\n`
+          : `${start} ${guilds.size} servers\n`);
+      }),
+      error => `${error}\n\n`)
+
+    friendCandidates.then(output => Utils.notifyMe(output, self, '```'));
   }
 );
 
+const SURVEY_MIN_DEFAULT = 4;
+library.addCommand('survey', ['Regular'],
+  ` [-g <guildId>] <sharedServerCount = ${SURVEY_MIN_DEFAULT}>`,
+  'Finds all users that share servers with me',
+  `
+  `,
+  PERMISSION_SELF,
+  function (parameter, options) {
+    const min = (parameter === '') ? SURVEY_MIN_DEFAULT : parseInt(parameter);
+    const {self, serverId, author} = options;
+    const target = self.guilds.get(serverId); // Defaults to issuing server
+    const targetMembers = target.members;
+    
+    Utils.notifyMe(`**Finding friends in '${target.name}'**`, self, '');
+    
+    const validGuilds = self.guilds.filter(s =>
+      s.id !== serverId // && s.id != '' // Not in servers to black list
+    );
+    const friendIdsWithCounter = targetMembers.map(member =>
+      [ member.id
+      , validGuilds.reduce((n, server) => n + server.members.has(member.id), 0)
+      ]
+    );
+
+    const strings = fp.chain(friendIdsWithCounter
+    , fp.sieve, [([id, count]) => count >= min && id !== author.id]
+    , fp.unmonad(Array.prototype.sort), [(a, b) => a[1] - b[1]] // Small to big
+    , fp.map, [([memberId, count]) => { // Format into string
+        const {displayName, id} = targetMembers.get(memberId);
+        return `${displayName} <@${id}> '${id}' shares ${count} servers\n`;
+      }]
+    );
+    Utils.notifyMe(strings, self, '');
+    return true;
+  }
+);
+/*
 library.addCommand('stalk', ['Regular'],
   'stalk <userID>',
   'Finds the last 25 messages made by a user in all shared servers',
@@ -293,4 +359,4 @@ library.addCommand('role', ['Regular', 'Broken'],
   }
 );
 //*/
-module.exports = library.commands;
+module.exports = library;

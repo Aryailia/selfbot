@@ -23,41 +23,8 @@ const Utils = {
     return personal.language_server;
   },
 
-  /**
-   * @param {Object} commands
-   * @param {Object} help
-   * @returns {function (Object, Object)} The main command and help objects
-   * to merge into in the current context
-   */
-  export: function (sourceCommands, sourceHelp) {
-    return function (targetCommands, targetHelp) {
-      Object.keys(sourceCommands).forEach(function (key) {
-        if (targetCommands.hasOwnProperty(key)) {
-          throw new SyntaxError(`Already registered the '${newCommand}' command`);
-        }
-        targetCommands[key] = sourceCommands[key];
-        targetHelp[key] = sourceHelp[key];
-      });
-    };
-  },
-
   displayDetailedHelp: function (help, channel) {
     channel.send(`**${help.command}**\n${help.header}\n${help.body}`);
-  },
-
-  addCommand: function (name, commands, help,
-      format, description, documentation, handler) {
-    if (commands.hasOwnProperty(name)) { // Check if already added
-      throw new SyntaxError(`Already registered the '${name}' command`);
-    }
-    help[name] = { command: format, header: description, body: documentation };
-    commands[name] = function (parameter, options, client) {
-      if (options.help === true) { // Help flag overrules execution
-        Utils.displayDetailedHelp(help[name], options.originChannel);
-      } else {
-        handler(parameter, options, client, name);
-      }
-    };
   },
 
   // Makes use of dynobot to alert myself in private channel

@@ -6,8 +6,14 @@ if (IS_DEVELOPMENT) {
 }
 const config = require(path.resolve('src/config.json'));
 
-const flagSetters = {
-  'h': function (options) {
+/**
+ * @todo include defaults here as part of flag setter declaration
+ * @todo seperate out into own funciton so others can use flags
+ */
+const flagSetters =
+  { 'c': function (options, parameter) {
+    options.channel = parameter;
+  }, 'h': function (options) {
     options.help = true;
   }, 'g': function (options, parameter) {
     options.serverId = parameter;

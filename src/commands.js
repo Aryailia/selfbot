@@ -114,7 +114,7 @@ library.addCommand('makesample', ['Personal', 'Development'],
   }
 );
 // library.commands.ms = library.commands.makesample; // Alias
-library.alias('ms', 'makesample')
+library.alias('ms', 'makesample');
 
 library.addCommand('prune', ['Regular'],
   ' [-u <userId>] [-g <serverId>] <messageId>',
@@ -148,42 +148,6 @@ library.addCommand('prune', ['Regular'],
     });
 
     return true;
-  }
-);
-
-library.addCommand('survey', ['Regular'],
-// const MIN = 2; // Minimum shared guild count
-  ' [-g <guildId>] <sharedServerCount = 2>',
-  'Finds all users that share servers with me',
-  `
-  `,
-  PERMISSION_SELF,
-  function (parameter, options) {
-    const min = parameter === '' ? '2' : parameter;
-    const {self, serverId} = options;
-    const target = self.guilds.get(serverId);
-    
-    Utils.notifyMe(`**Finding friends in '${target.name}'**`, self, '');
-
-    // Mapping to profiles to get at mutualGuilds
-    const profileList = target.members
-      .filter(member => member.id !== self.user.id && !member.user.bot)
-      .map(member => member.user.fetchProfile());
-    const friendCandidates = Promise.all(profileList).then(
-      member => member
-      .filter(member => member.mutualGuilds
-        .filter(guild =>!IGNORE_LIST.hasOwnProperty(guild)).size >= min)
-      .map(profile => {
-        const user = profile.user;
-        const start = `${user.username} ${user.id} is in`;
-        const guilds = profile.mutualGuilds;
-        return(options.verbose
-          ? `${start} ${guilds.map(server => server.name).join(', ')}\n\n`
-          : `${start} ${guilds.size} servers\n`);
-      }),
-      error => `${error}\n\n`)
-
-    friendCandidates.then(output => Utils.notifyMe(output, self, '```'));
   }
 );
 

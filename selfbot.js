@@ -78,7 +78,7 @@ selfbot.on('message', function (msg) {
 
   // Execute the command
   try {
-    if (imports.commands.run(command, arg, options) != false) {
+    if (imports.commands.run(command, arg, options) == true) {
       // msg.delete(); // Delete if valid command
     } else {
       console.error('an error! nooooo');

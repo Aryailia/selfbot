@@ -1,11 +1,10 @@
 {
-  "name": "tetra",
+  "name": "selfbot",
   "version": "1.0.0",
-  "description": "Dictionary Lookup",
-  "main": "index.js",
+  "description": "Discord bot for myself",
+  "main": "selfbot.js",
   "scripts": {
-    "discord": "echo \"Running discord bot\" && node selfbot.js",
-    "dev": "echo \"Running discord bot\" && node selfbot.js development",
+    "start": "node selfbot.js",
     "test": "echo \"Running: test.js\" && node test/test.js ",
     "test-login": "echo \"Attempting to login\" && node test/testbot.js",
     "lint-bot": "echo \"Linting bot\" && eslint --env node bot.js"

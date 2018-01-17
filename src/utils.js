@@ -1,7 +1,4 @@
 const path = require('path');
-const personal = require(path.resolve('./personal/personal.json'));
-const personalChannel = personal.self_notify_location;
-
 const MAX_MESSAGE_LENGTH = 2000; // Discord is 2000 a message
 const MAX_SEARCH_CLUSTER = 25;
 const FETCH_LIMIT = 100;
@@ -12,10 +9,10 @@ const Utils = {
    * @returns {boolean} True
    */
   isPersonal: function (channel) {
-    return channel.id === personalChannel.channel;
+    return channel.id === process.env.NOTIFY_CHANNEL;
   },
   langServerId: function (channel) {
-    return personal.language_server;
+    return process.env.LANGUAGE_SERVER_ID;
   },
 
   displayDetailedHelp: function (help, channel) {
@@ -24,8 +21,8 @@ const Utils = {
 
   // Makes use of dynobot to alert myself in private channel
   alert: function (message, client) {
-    const channel = client.guilds.get(personalChannel.server)
-      .channels.get(personalChannel.channel);
+    const channel = client.guilds.get(process.env.NOTIFY_SERVER)
+      .channels.get(process.env.NOTIFY_CHANNEL);
     channel.send(`?alert ${message.replace(/\s/g, '_')}`);
   },
 
@@ -130,8 +127,8 @@ const Utils = {
   notifyMe: function (strArray, selfClient, padding) {
     let fragment = '';
     const max = MAX_MESSAGE_LENGTH - padding.length * 2;
-    const channel = selfClient.guilds.get(personalChannel.server)
-      .channels.get(personalChannel.channel);
+    const channel = selfClient.guilds.get(process.env.NOTIFY_SERVER)
+      .channels.get(process.env.NOTIFY_CHANNEL);
     
     for (let i = 0; i < strArray.length; ++i) {
       const cur = strArray[i];

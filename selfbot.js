@@ -5,7 +5,7 @@ require('dotenv').config();
 const Discord = require('discord.js');
 // const Discord = require('./lib/bothelpers/psuedodiscord.js');
 const config = require('./src/config.json');
-const personal = require('./personal/personal.json');
+// const personal = require('./personal/personal.json');
 const Helper = require('./lib/bothelpers/botwrapper.js');
 const DEVELOPMENT = process.env.DEVELOPMENT === 'true';
 

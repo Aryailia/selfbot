@@ -31,10 +31,8 @@ const ROLES_MESSAGE_WIDTH = 60;
 const ROLES_MAX_DISPLAY = 99;
 const ROLES_COL_THRESHOLD = 60; // Inclusive threshold afer which we bump to 3 columns
 
-const personal = require('../personal/personal.json');
-//const personal = require('../personal/personal.json');
 const PERMISSION_SELF = [
-  { type: Helper.PERM_TYPE_USER, value: personal.self_id, level: 1 }];
+  { type: Helper.PERM_TYPE_USER, value: process.env.SELF_ID, level: 1 }];
 // const PERMISSION_PRIVATE = [...PERMISSION_SELF,
 //   { type: Helper.PERMTYPE}];
 

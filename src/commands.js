@@ -26,7 +26,7 @@ const IS_DEVELOPMENT = process.argv[2] != undefined &&
 const Utils = require('./utils.js');
 const Helper = require('../lib/bothelpers/botwrapper.js');
 const config = require('./config.json');
-const _ = require('./fp.js');
+const {_, Lazy} = require('../lib/bothelpers/fp');
 const langServer = require('./langServerManagement.js');
 const IGNORE_LIST = config.ignore_server;
 
@@ -34,7 +34,6 @@ const ROLES_MESSAGE_WIDTH = 60;
 const ROLES_MAX_DISPLAY = 99;
 const ROLES_COL_THRESHOLD = 60; // Inclusive threshold afer which we bump to 3 columns
 
-const fp = require('../lib/bothelpers/fp');
 const personal = require('../personal/personal.json');
 //const personal = require('../personal/personal.json');
 const PERMISSION_SELF = [
@@ -215,18 +214,62 @@ library.addCommand('survey', ['Regular'],
       ]
     );
 
-    const strings = fp.chain(friendIdsWithCounter
-    , fp.sieve, [([id, count]) => count >= min && id !== author.id]
-    , fp.unmonad(Array.prototype.sort), [(a, b) => a[1] - b[1]] // Small to big
-    , fp.map, [([memberId, count]) => { // Format into string
-        const {displayName, id} = targetMembers.get(memberId);
-        return `${displayName} <@${id}> '${id}' shares ${count} servers\n`;
-      }]
+    const strings = (_.chain(friendIdsWithCounter)
+      ( _.sieve(([id, count]) => count >= min && id !== author.id)
+      , _.unmonad(Array.prototype.sort, (a, b) => a[1] - b[1]) // Small to big
+      , _.map(([memberId, count]) => { // Format into string
+          const {displayName, id} = targetMembers.get(memberId);
+          return `${displayName} <@${id}> '${id}' shares ${count} servers\n`;
+        })
+      )
     );
     Utils.notifyMe(strings, self, '');
     return true;
   }
 );
+
+// library.addCommand('stalk', ['Regular'],
+//   'stalk <userID>',
+//   'Finds the last 25 messages made by a user in all shared servers',
+//   `Finds the last 25 messages made by the user <userID> in all servers you are in
+//   `,
+//   PERMISSION_SELF,
+//   function (id, options) {
+//     // Going through the guilds to avoid caching issues of client.users
+//     const query = self.guilds.find(server => (server.member(id) !== null));
+//     if (query === null) {
+//       Utils.notifyMe(`Could not find user '${id}'`, self, '');
+//       return;
+//     }
+//     const self = options.self;
+    
+//     const COUNT = 25;
+//     const LINE_LENGTH = 60;
+//     const FORMAT = 'h:m y-M-d';
+    
+//     const target = query.member(id).user;
+//     const header = [`**Messages by ${target.username}, ${target.id}`
+//       + ` (now ${Utils.formatDate(Date.now(), FORMAT)})**\n\n`];
+//     target.fetchProfile()
+//       // Turn them into a list of searches, which are promises
+//       .then(profile => profile.mutualGuilds.map(server =>
+//         Utils.getLatestMessages(id, COUNT, server)))
+//       // Have to wait for all searches to resolve
+//       .then(searchPerGuild => Promise.all(searchPerGuild)
+//         .then(searches => searches
+//           .reduce((x, y) => x.concat(y), [])  // flatten Promise.all()
+//           .sort(msg => msg.createdTimestamp)  // Sort lastest first
+//           .slice(0, COUNT)                    // Take
+//           .sort(msg => -msg.createdTimestamp) // Sort chronological again
+//           .map(msg =>                         // And format output
+//             `${Utils.truncate(msg.content, LINE_LENGTH)} ` + '``on ' +
+//             Utils.formatDate(msg.createdTimestamp, FORMAT) +
+//             ` in #${msg.channel.name} within ${msg.guild.name}` + '``\n'
+//           )))
+//       .then(msgs => Utils.notifyMe(header.concat(msgs), self, ''));
+//     return true;
+//   }
+// );
 /*
 library.addCommand('stalk', ['Regular'],
   'stalk <userID>',

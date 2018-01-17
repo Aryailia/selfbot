@@ -1,9 +1,4 @@
 const path = require('path');
-const IS_DEVELOPMENT = process.argv[2] != undefined &&
-  process.argv[2].trim().toLowerCase() === 'development';
-if (IS_DEVELOPMENT) {
-  delete require.cache[path.resolve('./personal/personal.json')];
-}
 const personal = require(path.resolve('./personal/personal.json'));
 const personalChannel = personal.self_notify_location;
 

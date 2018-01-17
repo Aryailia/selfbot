@@ -1,6 +1,5 @@
 const path = require('path');
-const IS_DEVELOPMENT = process.argv[2] != undefined &&
-  process.argv[2].trim().toLowerCase() === 'development';
+const IS_DEVELOPMENT = process.env.DEVELOPMENT === 'true';
 if (IS_DEVELOPMENT) {
   delete require.cache[path.resolve('./src/config.json')];
 }

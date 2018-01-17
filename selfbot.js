@@ -1,4 +1,5 @@
 'use strict';
+require('dotenv').config();
 
 // Always Load
 const Discord = require('discord.js');
@@ -6,11 +7,10 @@ const Discord = require('discord.js');
 const config = require('./src/config.json');
 const personal = require('./personal/personal.json');
 const Helper = require('./lib/bothelpers/botwrapper.js');
-const IS_DEVELOPMENT = process.argv[2] != undefined &&
-  process.argv[2].trim().toLowerCase() === 'development';
+const DEVELOPMENT = process.env.DEVELOPMENT === 'true';
 
 // Dynamic Loads
-const imports = Helper.conditionalLoader(IS_DEVELOPMENT, {
+const imports = Helper.conditionalLoader(DEVELOPMENT, {
   commands: require.resolve('./src/commands.js'),
   parse: require.resolve('./src/flags.js'),
 });
@@ -18,7 +18,7 @@ imports.staticOnFalse();
 
 // Login
 const selfbot = new Discord.Client({ bot: false }); // Is self-bot
-selfbot.login(personal.self_token);
+selfbot.login(process.env.TOKEN);
 
 // Ready
 selfbot.on('ready', () => {

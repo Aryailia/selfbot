@@ -1,12 +1,11 @@
 // Modules
-const IS_DEVELOPMENT = process.argv[2] != undefined &&
-  process.argv[2].trim().toLowerCase() === 'development';
+const IS_DEVELOPMENT = process.env.DEVELOPMENT === 'true';
 const Utils = require('./utils.js');
 const _ = require('./fp.js');
 
 // Code Body
 const _rolePrefixList = ['Learning', 'Heritage', 'Fluent', 'Native'];
-const _roleIgnoreList = ['Cantonese','Mandarin','English','Other','Classical Chinese'];
+const _roleIgnoreList = ['Cantonese','Mandarin','English','Singlish','Other','Classical Chinese'];
 
 
 function commands(addCommand) {

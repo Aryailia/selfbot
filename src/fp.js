@@ -1,5 +1,4 @@
-const IS_DEVELOPMENT = process.argv[2] != undefined &&
-  process.argv[2].trim().toLowerCase() === 'development';
+const IS_DEVELOPMENT = process.env.DEVELOPMENT === 'true';
 const importModules = {
   chunk: 'lodash/fp/chunk',
   concat: 'lodash/fp/concat',

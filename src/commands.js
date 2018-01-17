@@ -20,9 +20,6 @@
  * - permission converter
  */
 
-const IS_DEVELOPMENT = process.argv[2] != undefined &&
-  process.argv[2].trim().toLowerCase() === 'development';
-
 const Utils = require('./utils.js');
 const Helper = require('../lib/bothelpers/botwrapper.js');
 const config = require('./config.json');

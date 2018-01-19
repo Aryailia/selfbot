@@ -4,9 +4,8 @@ require('dotenv').config();
 // Always Load
 const Discord = require('discord.js');
 // const Discord = require('./lib/bothelpers/psuedodiscord.js');
-const config = require('./src/config.json');
-// const personal = require('./personal/personal.json');
-const Helper = require('./lib/bothelpers/botwrapper.js');
+const config = require('./config');
+const {Helper} = require('./src/inc');
 const DEVELOPMENT = process.env.DEVELOPMENT === 'true';
 
 // Dynamic Loads
@@ -48,7 +47,7 @@ selfbot.on('message', function (msg) {
     // Stuff that is okay to be overwritten by flags
     channel: msg.channel,
     serverId: msg.channel.guild.id,
-  }
+  };
 
   // Process the flags to set options
   const setFlag = imports.parse.flagSetters;
@@ -92,8 +91,8 @@ selfbot.on('message', function (msg) {
 const http = require('http');
 const express = require('express');
 const app = express();
-app.get("/", (request, response) => {
-  console.log(Date.now() + " Ping Received");
+app.get('/', (request, response) => {
+  console.log(Date.now() + ' Ping Received');
   response.sendStatus(200);
 });
 app.listen(process.env.PORT);

@@ -1,16 +1,11 @@
-const path = require('path');
-const IS_DEVELOPMENT = process.env.DEVELOPMENT === 'true';
-if (IS_DEVELOPMENT) {
-  delete require.cache[path.resolve('./src/config.json')];
-}
-const config = require(path.resolve('src/config.json'));
+const config = require('../config');
 
 /**
  * @todo include defaults here as part of flag setter declaration
  * @todo seperate out into own funciton so others can use flags
  */
-const flagSetters =
-  { 'c': function (options, parameter) {
+const flagSetters = {
+  'c': function (options, parameter) {
     options.channel = parameter;
   }, 'h': function (options) {
     options.help = true;

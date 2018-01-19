@@ -1,41 +1,29 @@
 'use strict';
 
 /**
- * @todo Add command categories for help
  * @todo fix seperator for command format in botwrapper
  * @todo login to set sender token for psuedodiscord
  * @todo message delete for pseudodiscord
- * @todo Currently finished functionality with
- * - ping
- * - makesample
- * - prune
- * @todo Need to refactor
- * - survey
- * - stalk
  * @todo Features still in progress
- * - help
  * - list (mostly complete, though lots to do if i make permission converter)
  * - role (add verbose)
- * @todo plans
- * - permission converter
  */
 
-const {Collection} = require('discord.js');
 const Utils = require('./utils.js');
-const Helper = require('../lib/bothelpers/botwrapper.js');
-const config = require('./config.json');
-const {_, Lazy} = require('../lib/bothelpers/fp');
+const config = require('../config');
+const {Helper, _, Lazy} = require('./inc');
+
+// Configs stuff
+const {
+  ROLES_MESSAGE_WIDTH,
+  ROLES_MAX_DISPLAY,
+  ROLES_COL_THRESHOLD,
+  SURVEY_MIN_DEFAULT,
+  IGNORE_SERVER_LIST_MUTUAL_FRIEND_COUNT,
+  PERMISSION_SELF,
+} = config;
+
 const langServer = require('./langServerManagement.js');
-const IGNORE_LIST = config.ignore_server;
-
-const ROLES_MESSAGE_WIDTH = 60;
-const ROLES_MAX_DISPLAY = 99;
-const ROLES_COL_THRESHOLD = 60; // Inclusive threshold afer which we bump to 3 columns
-
-const PERMISSION_SELF = [
-  { type: Helper.PERM_TYPE_USER, value: process.env.SELF_ID, level: 1 }];
-// const PERMISSION_PRIVATE = [...PERMISSION_SELF,
-//   { type: Helper.PERMTYPE}];
 
 
 const library = Helper.makeLibrary(
@@ -51,7 +39,8 @@ const library = Helper.makeLibrary(
   },
   config.prefix_literal
 );
-//langServer(library.addCommand);
+
+require('./langServerManagement.js').mergeTo(library);
 
 library.addCommand('ping', ['Regular'],
   '',
@@ -85,8 +74,9 @@ library.addCommand('help', ['Regular'],
   }
 );
 
+// This is suppose to simulate a conversation with a bot
 library.addCommand('makesample', ['Personal', 'Development'],
-  'makesample <length>',
+  ' <length>',
   'Generates a specifiable length of conversation. For testing.',
   `Generates an <length>-long conversation. Only availabe in personal.
   <length> must be between 1 and 100`,
@@ -151,7 +141,6 @@ library.addCommand('prune', ['Regular'],
   }
 );
 
-const SURVEY_MIN_DEFAULT = 4;
 library.addCommand('survey', ['Regular'],
   ` [-g <guildId>] <sharedServerCount = ${SURVEY_MIN_DEFAULT}>`,
   'Finds all users that share servers with me',
@@ -175,14 +164,13 @@ library.addCommand('survey', ['Regular'],
       ]
     );
 
-    const strings = (_.chain(friendIdsWithCounter)
-      ( _.sieve(([id, count]) => count >= min && id !== author.id)
-      , _.unmonad(Array.prototype.sort, (a, b) => a[1] - b[1]) // Small to big
-      , _.map(([memberId, count]) => { // Format into string
-          const {displayName, id} = targetMembers.get(memberId);
-          return `${displayName} <@${id}> '${id}' shares ${count} servers\n`;
-        })
-      )
+    const strings = _.chain(friendIdsWithCounter)(
+      _.sieve(([id, count]) => count >= min && id !== author.id)
+      ,_.unmonad(Array.prototype.sort, (a, b) => a[1] - b[1]) // Small to big
+      ,_.map(([memberId, count]) => { // Format into string
+        const {displayName, id} = targetMembers.get(memberId);
+        return `${displayName} <@${id}> '${id}' shares ${count} servers\n`;
+      })
     );
     Utils.notifyMe(strings, self, '');
     return true;
@@ -217,21 +205,17 @@ library.addCommand('stalk', ['Regular'],
       // Turn them into a list of searches, which are promises
       // Have to wait for all searches to resolve
     Promise.all(mutualGuilds.map(s => Utils.getLatestMessages(id, COUNT, s)))
-      .then(searches => _.chain(searches)
-        ( _.flatten(1)
-        // , _.unmonad(Array.prototype.sort,
-        //   (a, b) => b.createdTimestamp - a.createdTimestamp)
-        , _.unmonad(Array.prototype.sort,
+      .then(searches => _.chain(searches)(
+        _.flatten(1)
+        ,_.unmonad(Array.prototype.sort,
           (a, b) => a.createdTimestamp - b.createdTimestamp)
-        , _.takeLast(COUNT)
-        // , _.map(x => console.log(x.createdTimestamp))
-        , _.map(msg => 
+        ,_.takeLast(COUNT)
+        ,_.map(msg => 
           `${Utils.formatDate(msg.createdTimestamp, FORMAT)}: ` +
           ` **in <#${msg.channel.id}> within ${msg.guild.name}**\n` +
           `${Utils.truncate(msg.content, LINE_LENGTH)}\n\n`
-          )
         )
-      )
+      ))
       // .then(stuff => console.log(stuff))
       .then(msgs => Utils.notifyMe(header.concat(msgs), self, ''));
     return true;
@@ -267,13 +251,14 @@ library.addCommand('listrole', ['Regular', 'Broken'],
         
         // console.log('wat face', role.name)
         return `'${role.name}' has ${memberSize} members\n${'```'}${
-          (_.chain(usernames)
-            ( _.take(ROLES_MAX_DISPLAY)
-            , _.map(name => Utils.truncateAndPad(name, columnWidth))
-            , _.chunk(maxIndex + 1) // chunk so know where to add newlines
+          _.chain(usernames)(
+            _.take(ROLES_MAX_DISPLAY)
+            ,_.map(name => Utils.truncateAndPad(name, columnWidth))
+            ,_.chunk(maxIndex + 1) // chunk so know where to add newlines
+
             // undefined from chunk just fizzles from .join()
-            , _.map(row => `${row.join('').trim()}\n`) // make into string
-          )).join('')
+            ,_.map(row => `${row.join('').trim()}\n`) // make into string
+          ).join('')
         }${'```'}`;
       })
     );

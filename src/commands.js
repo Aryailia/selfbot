@@ -20,6 +20,7 @@
  * - permission converter
  */
 
+const {Collection} = require('discord.js');
 const Utils = require('./utils.js');
 const Helper = require('../lib/bothelpers/botwrapper.js');
 const config = require('./config.json');
@@ -59,6 +60,7 @@ library.addCommand('ping', ['Regular'],
   PERMISSION_SELF,
   function (parameter, options) {
     options.origin.send('pong');
+    console.log('\n\n');
     return true; // return success
   }
 );
@@ -187,89 +189,100 @@ library.addCommand('survey', ['Regular'],
   }
 );
 
-// library.addCommand('stalk', ['Regular'],
-//   'stalk <userID>',
-//   'Finds the last 25 messages made by a user in all shared servers',
-//   `Finds the last 25 messages made by the user <userID> in all servers you are in
-//   `,
-//   PERMISSION_SELF,
-//   function (id, options) {
-//     // Going through the guilds to avoid caching issues of client.users
-//     const query = self.guilds.find(server => (server.member(id) !== null));
-//     if (query === null) {
-//       Utils.notifyMe(`Could not find user '${id}'`, self, '');
-//       return;
-//     }
-//     const self = options.self;
-    
-//     const COUNT = 25;
-//     const LINE_LENGTH = 60;
-//     const FORMAT = 'h:m y-M-d';
-    
-//     const target = query.member(id).user;
-//     const header = [`**Messages by ${target.username}, ${target.id}`
-//       + ` (now ${Utils.formatDate(Date.now(), FORMAT)})**\n\n`];
-//     target.fetchProfile()
-//       // Turn them into a list of searches, which are promises
-//       .then(profile => profile.mutualGuilds.map(server =>
-//         Utils.getLatestMessages(id, COUNT, server)))
-//       // Have to wait for all searches to resolve
-//       .then(searchPerGuild => Promise.all(searchPerGuild)
-//         .then(searches => searches
-//           .reduce((x, y) => x.concat(y), [])  // flatten Promise.all()
-//           .sort(msg => msg.createdTimestamp)  // Sort lastest first
-//           .slice(0, COUNT)                    // Take
-//           .sort(msg => -msg.createdTimestamp) // Sort chronological again
-//           .map(msg =>                         // And format output
-//             `${Utils.truncate(msg.content, LINE_LENGTH)} ` + '``on ' +
-//             Utils.formatDate(msg.createdTimestamp, FORMAT) +
-//             ` in #${msg.channel.name} within ${msg.guild.name}` + '``\n'
-//           )))
-//       .then(msgs => Utils.notifyMe(header.concat(msgs), self, ''));
-//     return true;
-//   }
-// );
-/*
 library.addCommand('stalk', ['Regular'],
   'stalk <userID>',
   'Finds the last 25 messages made by a user in all shared servers',
   `Finds the last 25 messages made by the user <userID> in all servers you are in
   `,
-  function (id, options, self) {
+  PERMISSION_SELF,
+  function (id, options) {
+    const {self} = options;
     // Going through the guilds to avoid caching issues of client.users
-    const query = self.guilds.find(server =>(server.member(id) !== null));
-    if (query === null) {
+    const mutualGuilds = self.guilds.filter(g => g.member(id) !== null);
+    const target = mutualGuilds.first().members.get(id);
+
+    if (target === null) {
       Utils.notifyMe(`Could not find user '${id}'`, self, '');
-      return;
+      return false;
     }
     
     const COUNT = 25;
     const LINE_LENGTH = 60;
-    const FORMAT = 'h:m y-M-d';
+    const FORMAT = 'y-M-d h:m';
     
-    const target = query.member(id).user;
-    const header = [`**Messages by ${target.username}, ${target.id}`
-      + ` (now ${Utils.formatDate(Date.now(), FORMAT)})**\n\n`];
-    target.fetchProfile()
+    // const reverseDate = ();
+    const header = [`**Messages by ${target.user.username} <@${target.id}>`
+      + `, ${target.id} (now ${Utils.formatDate(Date.now(), FORMAT)})**\n\n`];
+    // return true;
       // Turn them into a list of searches, which are promises
-      .then(profile => profile.mutualGuilds.map(server =>
-        Utils.getLatestMessages(id, COUNT, server)))
       // Have to wait for all searches to resolve
-      .then(searchPerGuild => Promise.all(searchPerGuild)
-        .then(searches => searches
-          .reduce((x, y) => x.concat(y), [])  // flatten Promise.all()
-          .sort(msg => msg.createdTimestamp)  // Sort lastest first
-          .slice(0, COUNT)                    // Take
-          .sort(msg => -msg.createdTimestamp) // Sort chronological again
-          .map(msg =>                         // And format output
-            `${Utils.truncate(msg.content, LINE_LENGTH)} ` + '``on ' +
-            Utils.formatDate(msg.createdTimestamp, FORMAT) +
-            ` in #${msg.channel.name} within ${msg.guild.name}` + '``\n'
-          )))
+    Promise.all(mutualGuilds.map(s => Utils.getLatestMessages(id, COUNT, s)))
+      .then(searches => _.chain(searches)
+        ( _.flatten(1)
+        // , _.unmonad(Array.prototype.sort,
+        //   (a, b) => b.createdTimestamp - a.createdTimestamp)
+        , _.unmonad(Array.prototype.sort,
+          (a, b) => a.createdTimestamp - b.createdTimestamp)
+        , _.takeLast(COUNT)
+        // , _.map(x => console.log(x.createdTimestamp))
+        , _.map(msg => 
+          `${Utils.formatDate(msg.createdTimestamp, FORMAT)}: ` +
+          ` **in <#${msg.channel.id}> within ${msg.guild.name}**\n` +
+          `${Utils.truncate(msg.content, LINE_LENGTH)}\n\n`
+          )
+        )
+      )
+      // .then(stuff => console.log(stuff))
       .then(msgs => Utils.notifyMe(header.concat(msgs), self, ''));
+    return true;
   }
 );
 
+/**
+ * @todo fuzzy match
+ * @todo check interaction of guilds.members with offline users who have no role
+ */
+library.addCommand('listrole', ['Regular', 'Broken'],
+  'role <fullTitle>',
+  'Counts and displays all the members in a table',
+  `  I forget if I put a max on the number of members to be displayed
+  Probably want to use verbose flag to toggle that...`,
+  PERMISSION_SELF,
+  function (parameter, options) {
+    const {self, serverId, origin, verbose} = options;
+    const server = self.guilds.get(serverId);
+
+    // Find valid roles, there might be multiples with the same name
+    const roleList = server.roles.filter(role =>
+      role.name.toLowerCase() === parameter.toLowerCase() // Change to fuzzy
+    );
+  
+    const msgs = ((roleList.size === 0)
+      ? [`'${parameter}' was not a valid role name.`]
+      : roleList.map(function (role) {
+        const memberSize = role.members.size;
+        const maxIndex = memberSize < ROLES_COL_THRESHOLD ? 1 : 2;
+        const columnWidth = Math.floor(ROLES_MESSAGE_WIDTH / (maxIndex + 1));
+        const usernames = role.members.map(member => member.user.username);
+        
+        // console.log('wat face', role.name)
+        return `'${role.name}' has ${memberSize} members\n${'```'}${
+          (_.chain(usernames)
+            ( _.take(ROLES_MAX_DISPLAY)
+            , _.map(name => Utils.truncateAndPad(name, columnWidth))
+            , _.chunk(maxIndex + 1) // chunk so know where to add newlines
+            // undefined from chunk just fizzles from .join()
+            , _.map(row => `${row.join('').trim()}\n`) // make into string
+          )).join('')
+        }${'```'}`;
+      })
+    );
+    Helper.massMessage(msgs, origin);
+    return true;
+  }
+);
+
+/*
 library.addCommand('list', ['Regular', 'Personal'],
   'list -g <guildId> <parameter>',
   'Lists out information related to the server',
@@ -321,43 +334,6 @@ library.addCommand('list', ['Regular', 'Personal'],
     }
     Utils.notifyMe([`**Listing ${parameter} for server ${server.name}**\n`]
       .concat(output), selfbot, '');
-  }
-);
-
-library.addCommand('role', ['Regular', 'Broken'],
-  'role <fullTitle>',
-  'Counts and displays all the members in a table',
-  `  I forget if I put a max on the number of members to be displayed
-  Probably want to use verbose flag to toggle that...`,
-  function (parameter, options, self) {
-    const server = self.guilds.get(options.serverId);
-    // Find valid roles, there might be multiples with the same name
-    const roleList = server.roles.filter(function (role) {
-      return role.name.toLowerCase() === parameter.toLowerCase(); });
-  
-    roleList.size === 0
-      ?options.originChannel.send(`'${parameter}' was not a valid role name.`)
-      :roleList.forEach(function (role) {
-        const memberSize = role.members.size;
-        const maxIndex = memberSize < ROLES_COL_THRESHOLD ? 1 : 2;
-        const len = Math.floor(ROLES_MESSAGE_WIDTH / (maxIndex + 1));
-        const usernames = role.members.map(function (member) {
-          return member.user.username; });
-        
-        options.originChannel.send(
-          ['```'].concat(             // Construct array of string bits
-          `'${role.name}' has ${memberSize} members\n`,
-          _.flow(
-            _.take(ROLES_MAX_DISPLAY), // Limit
-            _.chunk(maxIndex + 1),     // Group into columns
-            _.flatMap(function (line) { return _.flow(
-              _.take(maxIndex),        // Pad until except for last element
-              _.map(function (name) { return Utils.truncateAndPad(name, len); })
-              )(line) + line[maxIndex].substr(0, len) + '\n';
-            }))(usernames),
-          '```', memberSize <= ROLES_MAX_DISPLAY ? '' : '...\n'
-        ).join(''));                  // Join said array of strings
-      });
   }
 );
 //*/

@@ -1,5 +1,4 @@
 // Modules
-const Utils = require('./utils');
 const {Helper, _} = require('./inc');
 const config = require('../config');
 
@@ -29,15 +28,15 @@ library.addCommand('ping2', ['Regular'],
 
 
 function _getColoringLanguageRoles(guild) {
-  const roles = guild.roles.map(role => role.name);
-  const languages = _.chain(roles)(
+  const roleNames = guild.roles.map(role => role.name);
+  const languages = _.chain(roleNames)(
     // roles that start with the prefixes
-    _.sieve(role => true === ROLE_INCLUDE_PREFIXES.some(prefix =>
-      role.toLowerCase().startsWith(prefix.toLowerCase())))
+    _.sieve(name => true === ROLE_INCLUDE_PREFIXES.some(prefix =>
+      name.toLowerCase().startsWith(prefix.toLowerCase())))
     // roles that are not in ignore list
-    ,_.sieve(role => false === ROLE_IGNORE_SUFFIX.some(suffix =>
-      role.toLowerCase().endsWith(suffix.toLowerCase())))
-    ,_.map(role => role.split(' ')[1]) // Get language name half
+    ,_.sieve(name => false === ROLE_IGNORE_SUFFIX.some(suffix =>
+      name.toLowerCase().endsWith(suffix.toLowerCase())))
+    ,_.map(name => extractLanguage(name)) // Get language name half
     ,_.unique()
     ,_.unmonad(Array.prototype.sort)
   );
@@ -79,6 +78,10 @@ library.addCommand('listlangs', ['Language Server'],
   }
 );
 
+function extractLanguage(name) {
+  return name.match(/.+? (.+)/)[1];
+}
+
 
 library.addCommand('assigncolor', ['Language Server'],
   '',
@@ -88,43 +91,37 @@ library.addCommand('assigncolor', ['Language Server'],
   Excludes are ${ROLE_IGNORE_SUFFIX.join(', ')}`,
   PERMISSION_SELF,
   function (parameter, options) {
-    const {serverId, self} = options;
+    const {origin, serverId, self} = options;
 
     // Setting stuff
     const startColor = [202,58, 46];  // 0xCA3A2E
-    const endinColor = [255,191,142]; // 0xFFBF8E
+    const endinColor = [254,191,142]; // 0xFEBF8E
 
-    const list1 = ROLE_INCLUDE_PREFIXES;
-    const list2 = _getColoringLanguageRoles(self.guild.get(serverId));
+    const prefix = ROLE_INCLUDE_PREFIXES;
+    const suffix = _getColoringLanguageRoles(self.guilds.get(serverId));
 
-    // Actual code
-    const maxIndex = list2.length - 1;
-    // x[1] - x[0], _zip(endinColor)
-    // x[0] - x[1], _zip(startColor)
-    const colorTween = _.flow(
-      _.zip(endinColor),
-      _.map(function (x) { return (x[1] - x[0]) / maxIndex; }),
-      _.zip(endinColor)
-    )(startColor);
-    const colorHash = {}; // Associated array of <language, color> pairs
-    list2.forEach(function (language, index) {
-      colorHash[language] = colorTween.map(function (x) {
-        return Math.max(0,Math.min(255,Math.round(x[0] + x[1] * index)));
-      });
-    });
-    
-    // const roleCollection = options.originChannel.guild.roles;
-    // list1.forEach(function (type) {
-    //   var roleList = _.flow( // Get all the roles that are `${list1} ${list2}`
-    //     _.map(function (lang) {
-    //       return roleCollection.find('name', `${type} ${lang}`);
-    //     }),
-    //     _.filter(function (role) { return role != undefined; })
-    //   )(list2);
-    //   roleList.forEach(function (role) { // Assign color
-    //     role.setColor(colorHash[role.name.split(' ')[1]]);
-    //   });
-    // });
+    const length = suffix.length;
+    const colorIndices = [0, 1, 2];
+    const step = _.chain(colorIndices)(
+      _.map(i => (startColor[i] - endinColor[i]) /  (length - 1))
+    );
+    const colorMap = {};
+    _.range(0, length, 1).forEach(i =>
+      // Map over each color, so three elements and tween with sizes of {step}
+      colorMap[suffix[i]] = _.chain(colorIndices)(_.map( 
+        c => Math.max(0,Math.min(255,Math.round(endinColor[c] + step[c] * i)))
+      ))
+    );
+
+    const languages = Object.keys(colorMap);    
+    (origin.guild.roles
+      .filter(role => ROLE_INCLUDE_PREFIXES
+        .some(prefix => languages
+          .some(lang => role.name === `${prefix} ${lang}`)
+        )
+      ).forEach(role => role.setColor(colorMap[extractLanguage(role.name)]))
+    );
+    return true;
   }
 );
 

@@ -11,7 +11,7 @@
 
 const Utils = require('./utils.js');
 const config = require('../config');
-const {Helper, _, Lazy} = require('./inc');
+const {Helper, _} = require('./inc');
 
 // Configs stuff
 const {
@@ -22,9 +22,6 @@ const {
   IGNORE_SERVER_LIST_MUTUAL_FRIEND_COUNT,
   PERMISSION_SELF,
 } = config;
-
-const langServer = require('./langServerManagement.js');
-
 
 const library = Helper.makeLibrary(
   // Same arguments as regular command just with two extra parameters before

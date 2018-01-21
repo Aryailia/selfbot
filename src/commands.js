@@ -213,7 +213,6 @@ library.addCommand('stalk', ['Regular'],
           `${Utils.truncate(msg.content, LINE_LENGTH)}\n\n`
         )
       ))
-      // .then(stuff => console.log(stuff))
       .then(msgs => Utils.notifyMe(header.concat(msgs), self, ''));
     return true;
   }

@@ -20,5 +20,7 @@
     "dotenv": "^4.0.0",
     "express": "^4.16.2"
   },
-  "engines": { "node": "9.4.0" }
+  "engines": {
+    "node": "9.4.0"
+  }
 }

@@ -14,19 +14,6 @@ const ROLE_IGNORE_SUFFIX = [
 
 
 const library = Helper.makeLibrary(() => true, '.');
-library.addCommand('ping2', ['Regular'],
-  '',
-  'For testing. Should respond with \'pong\'.',
-  'To test if the bot is working. Should respond with \'pong\'.',
-  PERMISSION_SELF,
-  function (parameter, options) {
-    options.origin.send('pong');
-    console.log('\n\n');
-    return true; // return success
-  }
-);
-
-
 function _getColoringLanguageRoles(guild) {
   const roleNames = guild.roles.map(role => role.name);
   const languages = _.chain(roleNames)(
@@ -36,11 +23,15 @@ function _getColoringLanguageRoles(guild) {
     // roles that are not in ignore list
     ,_.sieve(name => false === ROLE_IGNORE_SUFFIX.some(suffix =>
       name.toLowerCase().endsWith(suffix.toLowerCase())))
-    ,_.map(name => extractLanguage(name)) // Get language name half
+    ,_.map(name => _extractLanguage(name)) // Get language name half
     ,_.unique()
     ,_.unmonad(Array.prototype.sort)
   );
   return languages;
+}
+
+function _extractLanguage(name) {
+  return name.match(/.+? (.+)/)[1];
 }
 
 
@@ -78,11 +69,6 @@ library.addCommand('listlangs', ['Language Server'],
   }
 );
 
-function extractLanguage(name) {
-  return name.match(/.+? (.+)/)[1];
-}
-
-
 library.addCommand('assigncolor', ['Language Server'],
   '',
   'Assigns all the non-main language roles a color tweening between two values',
@@ -97,7 +83,6 @@ library.addCommand('assigncolor', ['Language Server'],
     const startColor = [202,58, 46];  // 0xCA3A2E
     const endinColor = [254,191,142]; // 0xFEBF8E
 
-    const prefix = ROLE_INCLUDE_PREFIXES;
     const suffix = _getColoringLanguageRoles(self.guilds.get(serverId));
 
     const length = suffix.length;
@@ -119,9 +104,24 @@ library.addCommand('assigncolor', ['Language Server'],
         .some(prefix => languages
           .some(lang => role.name === `${prefix} ${lang}`)
         )
-      ).forEach(role => role.setColor(colorMap[extractLanguage(role.name)]))
+      ).forEach(role => role.setColor(colorMap[_extractLanguage(role.name)]))
     );
     return true;
+  }
+);
+
+
+library.addCommand('countroles', ['Language Server'],
+  '',
+  'Assigns all the non-main language roles a color tweening between two values',
+  `  Hard-coded tween between to 0xCA3A2E to 0xFFBF8E 
+  Prefixes are ${ROLE_INCLUDE_PREFIXES.join(', ')}
+  Excludes are ${ROLE_IGNORE_SUFFIX.join(', ')}`,
+  PERMISSION_SELF,
+  function (parameter, options) {
+    const {self, serverId, origin} = options;
+    const guild = self.guilds.get(serverId);
+    origin.send(guild == null ? 'Invalid server' : guild.roles.size);
   }
 );
 

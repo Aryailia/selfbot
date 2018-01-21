@@ -3,17 +3,21 @@
 #   git clone "git://github.com/Aryailia/selfbot.git" "selfbot"
 # and in the app folder "." where the clone takes place, not inside "./selfbot"
 
-
+# CONFIG STUFF
 localFolder='selfbot' # the folder where the project was cloned into
 # if you want spaces then you must backslash them
 
-# More config stuff that you probably do not want to touch
+# MORE CONFIG STUFF that you probably do not want to touch
 config='config.js' # Should match config file name
+
+
 
 # # do not need to use git clone (since get bash file post-download)
 # # but useful to know for reference
 # repository='git://github.com/Aryailia/selfbot.git' 
 # git clone --recursive "$repository" "$localFolder"
+
+
 
 if [ ! -f ".env" ]; then
   echo 'Creating .env file'

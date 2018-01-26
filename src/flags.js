@@ -16,7 +16,7 @@ const flagSetters = {
   }, 'u': function (options, parameter) {
     options.userId = parameter;
   }, 'p': function (options, parameter) {
-    options.parameter = parameter;
+    options.param2 = parameter;
   }
 };
 

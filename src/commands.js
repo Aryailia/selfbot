@@ -38,6 +38,7 @@ const library = Helper.makeLibrary(
 );
 
 require('./langServerManagement.js').mergeTo(library);
+require('./lib/admin')(library, {_}, {PERMISSION_SELF});
 
 library.addCommand('ping', ['Regular'],
   '',

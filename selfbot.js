@@ -2,10 +2,10 @@
 require('dotenv').config();
 
 // Always Load
-const Discord = require('discord.js');
-// const Discord = require('./lib/bothelpers/psuedodiscord.js');
+const Helper = require('disbot-utils');
+// const Discord = require('discord.js');
+const Discord = Helper['pseudodiscord.js'];
 const config = require('./config');
-const {Helper} = require('./src/inc');
 const DEVELOPMENT = process.env.DEVELOPMENT === 'true';
 
 // Dynamic Loads

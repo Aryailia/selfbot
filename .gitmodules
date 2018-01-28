@@ -1,6 +1,0 @@
-[submodule "lib/bothelpers"]
-	path = lib/bothelpers
-	url = https://github.com/Aryailia/dbot-utils.git
-[submodule "lib/fp"]
-	path = lib/fp
-	url = https://github.com/Aryailia/pipe.git

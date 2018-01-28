@@ -1,4 +1,4 @@
-const Helper = require('./src/inc');
+const Helper = require('disbot-utils');
 
 // const PERMISSION_PRIVATE = [...PERMISSION_SELF,
 //   { type: Helper.PERMTYPE}

@@ -11,7 +11,8 @@
 
 const Utils = require('./utils.js');
 const config = require('../config');
-const {Helper, _} = require('./inc');
+const {_} = require('denotational');
+const Helper = require('disbot-utils');
 
 // Configs stuff
 const {
@@ -37,7 +38,7 @@ const library = Helper.makeLibrary(
   config.prefix_literal
 );
 
-require('./langServerManagement.js').mergeTo(library);
+require('./lib/langServerManagement').mergeTo(library);
 require('./lib/admin')(library, {_, Helper}, {PERMISSION_SELF});
 
 library.addCommand('ping', ['Regular'],

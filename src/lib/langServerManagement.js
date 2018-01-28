@@ -1,6 +1,7 @@
 // Modules
-const {Helper, _} = require('./inc');
-const config = require('../config');
+const Helper = require('disbot-utils');
+const {_} = require('denotational');
+const config = require('../../config');
 
 const {PERMISSION_SELF} = config;
 

@@ -16,6 +16,8 @@
     "tape": "^4.8.0"
   },
   "dependencies": {
+    "denotational": "^0.1.0",
+    "disbot-utils": "^1.0.0",
     "discord.js": "^11.1.0",
     "dotenv": "^4.0.0",
     "express": "^4.16.2"

@@ -48,7 +48,7 @@ library.addCommand('ping', ['Regular'],
   PERMISSION_SELF,
   function (parameter, options) {
     options.origin.send('pong');
-    console.log('\n\n');
+    // console.log('\n\n');
     return true; // return success
   }
 );

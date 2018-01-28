@@ -3,8 +3,8 @@ require('dotenv').config();
 
 // Always Load
 const Helper = require('disbot-utils');
-// const Discord = require('discord.js');
-const Discord = Helper['pseudodiscord.js'];
+const Discord = require('discord.js');
+// const Discord = Helper['pseudodiscord.js'];
 const config = require('./config');
 const DEVELOPMENT = process.env.DEVELOPMENT === 'true';
 
